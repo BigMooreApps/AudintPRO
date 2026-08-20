@@ -352,25 +352,6 @@ export default function AuditoriasModal({
              ======================================================== */}
           {isFormOpen && (
             <div className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-5 space-y-5 shadow-xl animate-fadeIn">
-              
-              {/* Stepper Header */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div>
-                  <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <FolderKanban className="w-4 h-4 text-indigo-400" />
-                    <span>{editingAuditId === 'new' ? 'Crear Nuevo Ciclo de Auditoría' : `Editar Configuración de Auditoría (${formData.codigo})`}</span>
-                  </h4>
-                  <p className="text-[11.5px] text-slate-400 mt-0.5">
-                    {editingAuditId === 'new'
-                      ? 'Configure los parámetros generales, equipos auditores y matriz de mapeo para este ciclo.'
-                      : 'Modifique los parámetros generales, equipos auditores o la matriz de mapeo de este ciclo.'}
-                  </p>
-                </div>
-                
-                <button type="button" onClick={handleCancelForm} className="text-slate-500 hover:text-slate-300">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
               {/* Progress Steps Indicators */}
               <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800">
