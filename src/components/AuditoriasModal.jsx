@@ -520,15 +520,6 @@ export default function AuditoriasModal({
               {/* PASO 2: CREAR / EDITAR AUDITORES (ÁREAS DEL LABORATORIO) */}
               {creationStep === 2 && (
                 <div className="space-y-4 animate-fadeIn">
-                  <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between">
-                    <div>
-                      <h5 className="font-bold text-white text-xs">Equipos y Áreas Auditoras Asignadas</h5>
-                      <p className="text-[11px] text-slate-400">
-                        Defina los departamentos o equipos que participarán en esta auditoría ({wizardAreas.length} configurados).
-                      </p>
-                    </div>
-                  </div>
-
                   {/* Formulario rápido para agregar área */}
                   <form onSubmit={handleAddArea} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center gap-2">
                     <input
