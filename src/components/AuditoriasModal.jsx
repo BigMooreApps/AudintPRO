@@ -532,7 +532,7 @@ export default function AuditoriasModal({
 
                     <button
                       type="submit"
-                      className="flex items-center gap-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 shrink-0"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition-all transform active:scale-95 shrink-0"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Agregar Área</span>
@@ -569,7 +569,7 @@ export default function AuditoriasModal({
                               <button
                                 type="button"
                                 onClick={() => handleSaveEditArea(area.id)}
-                                className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold"
+                                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-sm transition-all"
                               >
                                 Guardar
                               </button>
