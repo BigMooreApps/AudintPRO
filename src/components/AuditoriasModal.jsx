@@ -28,8 +28,7 @@ import {
   Settings,
   Filter,
   CheckSquare,
-  Square,
-  ChevronDown
+  Square
 } from 'lucide-react';
 import { AUDIT_TYPES, createDefaultAuditCycle } from '../engine/auditCyclesService';
 import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO } from '../data/defaultMapeo';
@@ -77,11 +76,6 @@ export default function AuditoriasModal({
   const [mapeoCodigo, setMapeoCodigo] = useState('');
   const [mapeoRequisito, setMapeoRequisito] = useState('');
   const [mapeoSelectedAreaIds, setMapeoSelectedAreaIds] = useState([]);
-  const [isAreaMultiSelectOpen, setIsAreaMultiSelectOpen] = useState(false);
-
-  const sortedWizardAreas = useMemo(() => {
-    return [...wizardAreas].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', undefined, { sensitivity: 'base' }));
-  }, [wizardAreas]);
 
   const filteredAudits = useMemo(() => {
     return (auditCycles || []).filter(a => {
@@ -639,7 +633,7 @@ export default function AuditoriasModal({
                           className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
                         >
                           <option value="ALL">Todas las Áreas</option>
-                          {sortedWizardAreas.map(a => (
+                          {wizardAreas.map(a => (
                             <option key={a.id} value={a.id}>
                               {a.nombre}
                             </option>
@@ -707,78 +701,30 @@ export default function AuditoriasModal({
                         </div>
                       </div>
 
-                      <div className="relative">
+                      <div>
                         <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                          Seleccionar Áreas Asignadas (Orden A - Z):
+                          Seleccione las Áreas o Equipos que deben auditar este numeral:
                         </label>
-                        
-                        {/* Botón activador del menú desplegable */}
-                        <button
-                          type="button"
-                          onClick={() => setIsAreaMultiSelectOpen(!isAreaMultiSelectOpen)}
-                          className="w-full bg-slate-900 border border-slate-700/80 hover:border-indigo-500 rounded-xl px-3 py-2 text-xs text-left flex items-center justify-between transition-all"
-                        >
-                          <span className={mapeoSelectedAreaIds.length > 0 ? "text-indigo-300 font-semibold" : "text-slate-500"}>
-                            {mapeoSelectedAreaIds.length === 0
-                              ? "-- Haga clic para seleccionar áreas con checkboxes (A - Z) --"
-                              : `${mapeoSelectedAreaIds.length} área${mapeoSelectedAreaIds.length > 1 ? 's' : ''} asignada${mapeoSelectedAreaIds.length > 1 ? 's' : ''}`}
-                          </span>
-                          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isAreaMultiSelectOpen ? 'rotate-180 text-indigo-400' : ''}`} />
-                        </button>
-
-                        {/* Menú desplegable con checkboxes */}
-                        {isAreaMultiSelectOpen && (
-                          <div className="absolute z-30 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden max-h-[170px] overflow-y-auto custom-scrollbar p-1.5 space-y-1 animate-fadeIn">
-                            {sortedWizardAreas.map(a => {
-                              const isChecked = mapeoSelectedAreaIds.includes(a.id);
-                              return (
-                                <button
-                                  key={a.id}
-                                  type="button"
-                                  onClick={() => handleToggleAreaCheckbox(a.id)}
-                                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all ${
-                                    isChecked
-                                      ? 'bg-indigo-600/25 text-white border border-indigo-500/40 font-semibold'
-                                      : 'text-slate-300 hover:bg-slate-800 border border-transparent'
-                                  }`}
-                                >
-                                  {isChecked ? (
-                                    <CheckSquare className="w-4 h-4 text-indigo-400 shrink-0" />
-                                  ) : (
-                                    <Square className="w-4 h-4 text-slate-600 shrink-0" />
-                                  )}
-                                  <span className="truncate">{a.nombre}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Etiquetas de áreas seleccionadas */}
-                        {mapeoSelectedAreaIds.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {mapeoSelectedAreaIds.map(aId => {
-                              const area = wizardAreas.find(a => a.id === aId);
-                              if (!area) return null;
-                              return (
-                                <span
-                                  key={aId}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600/25 text-indigo-200 border border-indigo-500/40 text-[11.5px] font-semibold"
-                                >
-                                  <span>{area.nombre}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleAreaCheckbox(aId)}
-                                    className="text-indigo-400 hover:text-rose-400 transition-colors p-0.5 rounded"
-                                    title="Quitar área"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 max-h-[100px] overflow-y-auto custom-scrollbar">
+                          {wizardAreas.map(a => {
+                            const isChecked = mapeoSelectedAreaIds.includes(a.id);
+                            return (
+                              <button
+                                key={a.id}
+                                type="button"
+                                onClick={() => handleToggleAreaCheckbox(a.id)}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-left text-xs transition-all ${
+                                  isChecked 
+                                    ? 'bg-indigo-600/25 text-indigo-200 border border-indigo-500/40 font-semibold shadow-sm' 
+                                    : 'text-slate-400 hover:bg-slate-800 border border-transparent'
+                                }`}
+                              >
+                                {isChecked ? <CheckSquare className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> : <Square className="w-3.5 h-3.5 text-slate-600 shrink-0" />}
+                                <span className="truncate">{a.nombre}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
                       <div className="flex justify-end gap-2 pt-1 border-t border-slate-800">
