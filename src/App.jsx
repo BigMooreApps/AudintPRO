@@ -539,8 +539,6 @@ export default function App() {
         currentView={currentView}
         onChangeView={(view) => setCurrentView(view)}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
-        onOpenAuditoresModal={() => setIsAuditoresModalOpen(true)}
-        onOpenMapeoModal={() => setIsMapeoModalOpen(true)}
         onOpenCompromisosModal={() => setIsCompromisosModalOpen(true)}
         onOpenAuditoriasModal={() => setIsAuditoriasModalOpen(true)}
         activeAudit={activeAudit}

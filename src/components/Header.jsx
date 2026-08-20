@@ -2,8 +2,6 @@ import React from 'react';
 import { 
   ShieldCheck, 
   Key, 
-  Map, 
-  Users, 
   BarChart3, 
   Play, 
   ShieldAlert,
@@ -15,8 +13,6 @@ export default function Header({
   currentView = 'DASHBOARD',
   onChangeView,
   onOpenApiKeyModal,
-  onOpenAuditoresModal,
-  onOpenMapeoModal,
   onOpenCompromisosModal,
   onOpenAuditoriasModal,
   activeAudit,
@@ -104,48 +100,25 @@ export default function Header({
             )}
           </button>
 
-          {/* BOTONES EXCLUSIVOS DE SUPER AUDITOR (Mapeo, Auditores, Clave API) */}
+          {/* Botón 5: Clave API (Exclusivo de Super Auditor) */}
           {isSuperAuditor && (
-            <>
-              {/* Botón 5: Mapeo */}
-              <button
-                onClick={onOpenMapeoModal}
-                className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/40 rounded-2xl transition-all group"
-                title="Mapeo e Interrelación de Numerales vs Áreas"
-              >
-                <Map className="w-5 h-5 text-teal-400 group-hover:scale-110 transition-transform mb-1" />
-                <span className="text-[11px] font-bold text-slate-300 group-hover:text-white">Mapeo</span>
-              </button>
-
-              {/* Botón 6: Auditores */}
-              <button
-                onClick={onOpenAuditoresModal}
-                className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/40 rounded-2xl transition-all group"
-                title="Gestión de Auditores y Áreas"
-              >
-                <Users className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform mb-1" />
-                <span className="text-[11px] font-bold text-slate-300 group-hover:text-white">Auditores</span>
-              </button>
-
-              {/* Botón 7: Clave API */}
-              <button
-                onClick={onOpenApiKeyModal}
-                className={`flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-slate-800 border rounded-2xl transition-all group ${
-                  apiConfig?.apiKey
-                    ? 'border-emerald-500/40 text-emerald-300'
-                    : 'border-slate-800 hover:border-emerald-500/50 text-slate-300'
-                }`}
-                title={apiConfig?.apiKey ? 'Clave API Conectada' : 'Configurar Clave API'}
-              >
-                <Key className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform mb-1" />
-                <span className="text-[11px] font-bold group-hover:text-white">
-                  {apiConfig?.apiKey ? 'API Lista' : 'Clave API'}
-                </span>
-              </button>
-            </>
+            <button
+              onClick={onOpenApiKeyModal}
+              className={`flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-slate-800 border rounded-2xl transition-all group ${
+                apiConfig?.apiKey
+                  ? 'border-emerald-500/40 text-emerald-300'
+                  : 'border-slate-800 hover:border-emerald-500/50 text-slate-300'
+              }`}
+              title={apiConfig?.apiKey ? 'Clave API Conectada' : 'Configurar Clave API'}
+            >
+              <Key className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform mb-1" />
+              <span className="text-[11px] font-bold group-hover:text-white">
+                {apiConfig?.apiKey ? 'API Lista' : 'Clave API'}
+              </span>
+            </button>
           )}
 
-          {/* Botón de Salir (Último botón) */}
+          {/* Botón de Salir (Último botón idéntico en ambos roles) */}
           <button
             onClick={onLogout}
             className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/50 rounded-2xl transition-all group"
