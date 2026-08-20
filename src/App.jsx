@@ -76,9 +76,12 @@ export default function App() {
       setSelectedAreaId(user.areaId);
       const scopedNumerals = (activeAudit?.mapeoNumerales || mapeoNumerales).filter(n => (n.areaIds || []).includes(user.areaId));
       setNumerales(scopedNumerals.length > 0 ? scopedNumerals : mapeoNumerales);
+      setIsAuditoriasModalOpen(false);
     } else {
       setSelectedAreaId('ALL');
       setNumerales(activeAudit?.mapeoNumerales || mapeoNumerales);
+      // Al ingresar como Super Auditor, abrir New AU como primera vista
+      setIsAuditoriasModalOpen(true);
     }
 
     setCurrentView('DASHBOARD');
