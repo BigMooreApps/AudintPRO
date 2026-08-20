@@ -48,31 +48,6 @@ export default function Header({
           </div>
         </div>
 
-        {/* Ciclo de Auditoría Activo en el Centro (Solo para Super Auditor o informativo) */}
-        {activeAudit && (
-          <div 
-            onClick={isSuperAuditor ? onOpenAuditoriasModal : undefined}
-            className={`hidden xl:flex items-center gap-2 px-3.5 py-1.5 bg-slate-950/80 border border-indigo-500/30 rounded-2xl shadow-sm ${
-              isSuperAuditor ? 'hover:bg-slate-800 hover:border-indigo-500/60 cursor-pointer group' : ''
-            }`}
-            title={isSuperAuditor ? "Haga clic para cambiar de auditoría, crear nuevo ciclo o ver historial" : "Auditoría en curso"}
-          >
-            <div className={`w-2 h-2 rounded-full ${activeAudit.estado === 'CERRADA' ? 'bg-slate-500' : 'bg-emerald-400 animate-pulse'}`} />
-            <div className="text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-mono font-black text-indigo-400 uppercase">{activeAudit.codigo}</span>
-                <span className="text-[10px] text-slate-500">•</span>
-                <span className="text-[11px] font-bold text-slate-200 group-hover:text-white truncate max-w-[180px]">{activeAudit.nombre}</span>
-              </div>
-            </div>
-            {isSuperAuditor && (
-              <span className="text-[9.5px] font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">
-                Cambiar
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
           
