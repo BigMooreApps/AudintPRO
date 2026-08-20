@@ -558,19 +558,9 @@ export default function AuditoriasModal({
                       className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 min-w-[200px]"
                     />
 
-                    <select
-                      value={newAreaColor}
-                      onChange={(e) => setNewAreaColor(e.target.value)}
-                      className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-indigo-300 focus:outline-none focus:border-indigo-500"
-                    >
-                      {COLOR_OPTIONS.map(c => (
-                        <option key={c.id} value={c.id}>{c.label}</option>
-                      ))}
-                    </select>
-
                     <button
                       type="submit"
-                      className="flex items-center gap-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20"
+                      className="flex items-center gap-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 shrink-0"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Agregar Área</span>
