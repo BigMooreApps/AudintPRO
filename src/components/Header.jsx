@@ -8,9 +8,7 @@ import {
   Play, 
   ShieldAlert,
   FolderKanban,
-  LogOut,
-  User,
-  Crown
+  LogOut
 } from 'lucide-react';
 
 export default function Header({
@@ -51,7 +49,19 @@ export default function Header({
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
           
-          {/* Botón 1: Dashboard */}
+          {/* Botón 1: New AU (Primera opción para Super Auditor) */}
+          {isSuperAuditor && (
+            <button
+              onClick={onOpenAuditoriasModal}
+              className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/40 rounded-2xl transition-all group"
+              title="Historial y Gestión de Ciclos de Auditoría ISO 17025"
+            >
+              <FolderKanban className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform mb-1" />
+              <span className="text-[11px] font-bold text-slate-300 group-hover:text-white">New AU</span>
+            </button>
+          )}
+
+          {/* Botón 2: Dashboard */}
           <button
             onClick={() => onChangeView('DASHBOARD')}
             className={`flex flex-col items-center justify-center w-16 h-14 border rounded-2xl transition-all group ${
@@ -65,7 +75,7 @@ export default function Header({
             <span className="text-[11px] font-bold group-hover:text-white">Dashboard</span>
           </button>
 
-          {/* Botón 2: Auditoría */}
+          {/* Botón 3: Auditoría */}
           <button
             onClick={() => onChangeView('AUDIT')}
             className={`flex flex-col items-center justify-center w-16 h-14 border rounded-2xl transition-all group ${
@@ -79,7 +89,7 @@ export default function Header({
             <span className="text-[11px] font-bold group-hover:text-white">Auditoría</span>
           </button>
 
-          {/* Botón 3: Tareas */}
+          {/* Botón 4: Tareas */}
           <button
             onClick={onOpenCompromisosModal}
             className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-2xl transition-all group relative"
@@ -94,19 +104,9 @@ export default function Header({
             )}
           </button>
 
-          {/* BOTONES EXCLUSIVOS DE SUPER AUDITOR */}
+          {/* BOTONES EXCLUSIVOS DE SUPER AUDITOR (Mapeo, Auditores, Clave API) */}
           {isSuperAuditor && (
             <>
-              {/* Botón 4: New AU */}
-              <button
-                onClick={onOpenAuditoriasModal}
-                className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/40 rounded-2xl transition-all group"
-                title="Historial y Gestión de Ciclos de Auditoría ISO 17025"
-              >
-                <FolderKanban className="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform mb-1" />
-                <span className="text-[11px] font-bold text-slate-300 group-hover:text-white">New AU</span>
-              </button>
-
               {/* Botón 5: Mapeo */}
               <button
                 onClick={onOpenMapeoModal}
@@ -145,7 +145,7 @@ export default function Header({
             </>
           )}
 
-          {/* Botón de Salir (Último botón idéntico en estilo para ambos roles) */}
+          {/* Botón de Salir (Último botón) */}
           <button
             onClick={onLogout}
             className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/50 rounded-2xl transition-all group"
