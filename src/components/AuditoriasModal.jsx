@@ -73,14 +73,14 @@ export default function AuditoriasModal({
     cloneFromCurrent: true
   });
 
-  // Áreas personalizadas para la nueva auditoría (Paso 2)
+  // Áreas personalizadas para la auditoría (Paso 2)
   const [wizardAreas, setWizardAreas] = useState(DEFAULT_AREAS);
   const [newAreaName, setNewAreaName] = useState('');
   const [newAreaColor, setNewAreaColor] = useState('indigo');
   const [editingAreaId, setEditingAreaId] = useState(null);
   const [editingAreaName, setEditingAreaName] = useState('');
 
-  // Mapeo personalizado para la nueva auditoría (Paso 3)
+  // Mapeo personalizado para la auditoría (Paso 3)
   const [wizardMapeo, setWizardMapeo] = useState(DEFAULT_NUMERALES_MAPEO);
   const [mapeoFilterAreaId, setMapeoFilterAreaId] = useState('ALL');
   const [mapeoSearchTerm, setMapeoSearchTerm] = useState('');
@@ -147,6 +147,7 @@ export default function AuditoriasModal({
 
   const handleStartEdit = (audit) => {
     setEditingAuditId(audit.id);
+    setCreationStep(1);
     setFormData({
       codigo: audit.codigo || '',
       nombre: audit.nombre || '',
@@ -159,6 +160,11 @@ export default function AuditoriasModal({
       observacionesGenerales: audit.observacionesGenerales || '',
       cloneFromCurrent: false
     });
+    setWizardAreas((audit.areas || DEFAULT_AREAS).map(a => ({ ...a })));
+    setWizardMapeo((audit.mapeoNumerales || DEFAULT_NUMERALES_MAPEO).map(n => ({ ...n, areaIds: [...(n.areaIds || [])] })));
+    setMapeoFilterAreaId('ALL');
+    setMapeoSearchTerm('');
+    setEditingMapeoNumeralId(null);
     setIsFormOpen(true);
   };
 
@@ -258,23 +264,24 @@ export default function AuditoriasModal({
     if (editingMapeoNumeralId === id) handleCancelMapeoForm();
   };
 
-  // Guardar y Finalizar Auditoría
-  const handleFinalizeCreate = () => {
+  // Guardar y Finalizar Auditoría (tanto para nueva como para edición)
+  const handleFinalizeSave = () => {
     if (!formData.nombre.trim() || !formData.codigo.trim()) return;
 
-    onCreateAudit({
-      ...formData,
-      customAreas: wizardAreas,
-      customMapeo: wizardMapeo
-    });
+    if (editingAuditId === 'new') {
+      onCreateAudit({
+        ...formData,
+        customAreas: wizardAreas,
+        customMapeo: wizardMapeo
+      });
+    } else {
+      onUpdateAudit(editingAuditId, {
+        ...formData,
+        areas: wizardAreas,
+        mapeoNumerales: wizardMapeo
+      });
+    }
 
-    handleCancelForm();
-  };
-
-  const handleSaveSingleEdit = (e) => {
-    e?.preventDefault();
-    if (!formData.nombre.trim() || !formData.codigo.trim()) return;
-    onUpdateAudit(editingAuditId, formData);
     handleCancelForm();
   };
 
@@ -313,7 +320,7 @@ export default function AuditoriasModal({
           </button>
         </div>
 
-        {/* Filter and Action Bar (Solo si no está creando/editando) */}
+        {/* Filter and Action Bar (Solo si no está en el asistente) */}
         {!isFormOpen && (
           <div className="px-6 py-3.5 bg-slate-950/60 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
             <div className="flex-1 min-w-[240px] relative">
@@ -341,9 +348,9 @@ export default function AuditoriasModal({
         <div className="p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar text-xs">
           
           {/* ========================================================
-              FLUJO DE CREACIÓN GUIADO (3 PASOS) PARA NUEVA AUDITORÍA
+              FLUJO GUIADO DE 3 PASOS (CREAR Y EDITAR AUDITORÍA)
              ======================================================== */}
-          {isFormOpen && editingAuditId === 'new' && (
+          {isFormOpen && (
             <div className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-5 space-y-5 shadow-xl animate-fadeIn">
               
               {/* Stepper Header */}
@@ -351,10 +358,12 @@ export default function AuditoriasModal({
                 <div>
                   <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                     <FolderKanban className="w-4 h-4 text-indigo-400" />
-                    <span>Crear Nuevo Ciclo de Auditoría</span>
+                    <span>{editingAuditId === 'new' ? 'Crear Nuevo Ciclo de Auditoría' : `Editar Configuración de Auditoría (${formData.codigo})`}</span>
                   </h4>
                   <p className="text-[11.5px] text-slate-400 mt-0.5">
-                    Configure los parámetros generales, equipos auditores y matriz de mapeo para este ciclo.
+                    {editingAuditId === 'new'
+                      ? 'Configure los parámetros generales, equipos auditores y matriz de mapeo para este ciclo.'
+                      : 'Modifique los parámetros generales, equipos auditores o la matriz de mapeo de este ciclo.'}
                   </p>
                 </div>
                 
@@ -375,7 +384,7 @@ export default function AuditoriasModal({
                   }`}
                 >
                   <span className="w-5 h-5 rounded-full bg-slate-950 flex items-center justify-center text-[10px] font-mono">1</span>
-                  <span>Parámetros Generales</span>
+                  <span>1. Parámetros Generales</span>
                 </button>
 
                 <button
@@ -388,7 +397,7 @@ export default function AuditoriasModal({
                   }`}
                 >
                   <span className="w-5 h-5 rounded-full bg-slate-950 flex items-center justify-center text-[10px] font-mono">2</span>
-                  <span>Crear Auditores</span>
+                  <span>2. Crear / Editar Auditores</span>
                 </button>
 
                 <button
@@ -401,7 +410,7 @@ export default function AuditoriasModal({
                   }`}
                 >
                   <span className="w-5 h-5 rounded-full bg-slate-950 flex items-center justify-center text-[10px] font-mono">3</span>
-                  <span>Crear Mapeo</span>
+                  <span>3. Crear / Editar Mapeo</span>
                 </button>
               </div>
 
@@ -527,7 +536,7 @@ export default function AuditoriasModal({
                 </div>
               )}
 
-              {/* PASO 2: CREAR AUDITORES (ÁREAS DEL LABORATORIO) */}
+              {/* PASO 2: CREAR / EDITAR AUDITORES (ÁREAS DEL LABORATORIO) */}
               {creationStep === 2 && (
                 <div className="space-y-4 animate-fadeIn">
                   <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between">
@@ -654,7 +663,7 @@ export default function AuditoriasModal({
                 </div>
               )}
 
-              {/* PASO 3: CREAR MAPEO (EXACTAMENTE IGUAL A MAPEO MODAL) */}
+              {/* PASO 3: CREAR / EDITAR MAPEO (EXACTAMENTE IGUAL A MAPEO MODAL) */}
               {creationStep === 3 && (
                 <div className="space-y-4 animate-fadeIn">
                   
@@ -872,11 +881,11 @@ export default function AuditoriasModal({
 
                     <button
                       type="button"
-                      onClick={handleFinalizeCreate}
+                      onClick={handleFinalizeSave}
                       className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all transform active:scale-95"
                     >
                       <Check className="w-4 h-4" />
-                      <span>✓ Finalizar y Crear Auditoría</span>
+                      <span>{editingAuditId === 'new' ? '✓ Finalizar y Crear Auditoría' : '✓ Guardar Cambios de la Auditoría'}</span>
                     </button>
                   </div>
 
@@ -884,96 +893,6 @@ export default function AuditoriasModal({
               )}
 
             </div>
-          )}
-
-          {/* Formulario Simple de Edición para Auditoría Existente */}
-          {isFormOpen && editingAuditId !== 'new' && (
-            <form onSubmit={handleSaveSingleEdit} className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-5 space-y-4 shadow-xl animate-fadeIn">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <FolderKanban className="w-4 h-4 text-indigo-400" />
-                  <span>Editar Parámetros de la Auditoría</span>
-                </h4>
-                <button type="button" onClick={handleCancelForm} className="text-slate-500 hover:text-slate-300">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Código de Auditoría:</label>
-                  <input
-                    type="text"
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono font-bold focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Nombre Descriptivo:</label>
-                  <input
-                    type="text"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-semibold focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Tipo de Auditoría:</label>
-                  <select
-                    value={formData.tipo}
-                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
-                  >
-                    {AUDIT_TYPES.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Auditor Líder:</label>
-                  <input
-                    type="text"
-                    value={formData.auditorLider}
-                    onChange={(e) => setFormData({ ...formData, auditorLider: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Laboratorio:</label>
-                  <input
-                    type="text"
-                    value={formData.laboratorio}
-                    onChange={(e) => setFormData({ ...formData, laboratorio: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={handleCancelForm}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded-xl text-xs font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
           )}
 
           {/* Listado de Auditorías Existentes */}
@@ -1087,11 +1006,11 @@ export default function AuditoriasModal({
                             {isClosed ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                           </button>
 
-                          {/* Editar */}
+                          {/* Editar (Abre el wizard de 3 pasos) */}
                           <button
                             onClick={() => handleStartEdit(audit)}
                             className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-300 rounded-xl transition-all"
-                            title="Editar información de esta auditoría"
+                            title="Editar configuración completa de esta auditoría (3 pasos)"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>

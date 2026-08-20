@@ -207,6 +207,20 @@ export default function App() {
       saveAllAuditCycles(updatedList);
       return updatedList;
     });
+
+    // Si la auditoría editada es la activa, sincronizar estados en memoria
+    if (activeAuditId === auditId) {
+      if (updatedData.areas) setAreasState(updatedData.areas);
+      if (updatedData.mapeoNumerales) {
+        setMapeoNumeralesState(updatedData.mapeoNumerales);
+        if (currentUser?.role === 'AUDITOR' && currentUser.areaId) {
+          const scoped = updatedData.mapeoNumerales.filter(n => (n.areaIds || []).includes(currentUser.areaId));
+          setNumerales(scoped.length > 0 ? scoped : updatedData.mapeoNumerales);
+        } else {
+          setNumerales(updatedData.mapeoNumerales);
+        }
+      }
+    }
   };
 
   const handleDeleteAudit = (auditId) => {
