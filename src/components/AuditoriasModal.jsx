@@ -4,7 +4,7 @@ import {
   FolderKanban, 
   Plus, 
   Check, 
-  CheckCheck,
+  CheckCheck, 
   CheckCircle2, 
   XCircle, 
   Clock, 
@@ -17,15 +17,18 @@ import {
   Calendar, 
   UserCheck, 
   Building2, 
-  Search,
-  ArrowRight,
-  ArrowLeft,
-  TrendingUp,
-  AlertTriangle,
-  Users,
-  Map,
-  Layers,
-  Settings
+  Search, 
+  ArrowRight, 
+  ArrowLeft, 
+  TrendingUp, 
+  AlertTriangle, 
+  Users, 
+  Map, 
+  Layers, 
+  Settings,
+  Filter,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { AUDIT_TYPES, createDefaultAuditCycle } from '../engine/auditCyclesService';
 import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO } from '../data/defaultMapeo';
@@ -79,7 +82,12 @@ export default function AuditoriasModal({
 
   // Mapeo personalizado para la nueva auditoría (Paso 3)
   const [wizardMapeo, setWizardMapeo] = useState(DEFAULT_NUMERALES_MAPEO);
+  const [mapeoFilterAreaId, setMapeoFilterAreaId] = useState('ALL');
   const [mapeoSearchTerm, setMapeoSearchTerm] = useState('');
+  const [editingMapeoNumeralId, setEditingMapeoNumeralId] = useState(null);
+  const [mapeoCodigo, setMapeoCodigo] = useState('');
+  const [mapeoRequisito, setMapeoRequisito] = useState('');
+  const [mapeoSelectedAreaIds, setMapeoSelectedAreaIds] = useState([]);
 
   const filteredAudits = useMemo(() => {
     return (auditCycles || []).filter(a => {
@@ -94,15 +102,21 @@ export default function AuditoriasModal({
     });
   }, [auditCycles, searchTerm]);
 
-  // Numerales filtrados para el paso 3
+  // Numerales filtrados para el paso 3 (igual que en MapeoModal)
   const filteredWizardMapeo = useMemo(() => {
-    if (!mapeoSearchTerm.trim()) return wizardMapeo;
-    const term = mapeoSearchTerm.toLowerCase();
-    return wizardMapeo.filter(n => 
-      (n.codigo || '').toLowerCase().includes(term) || 
-      (n.requisito || '').toLowerCase().includes(term)
-    );
-  }, [wizardMapeo, mapeoSearchTerm]);
+    return (wizardMapeo || []).filter(n => {
+      if (mapeoFilterAreaId !== 'ALL' && !(n.areaIds || []).includes(mapeoFilterAreaId)) {
+        return false;
+      }
+      if (mapeoSearchTerm.trim()) {
+        const term = mapeoSearchTerm.toLowerCase();
+        const matchCode = (n.codigo || '').toLowerCase().includes(term);
+        const matchReq = (n.requisito || '').toLowerCase().includes(term);
+        if (!matchCode && !matchReq) return false;
+      }
+      return true;
+    });
+  }, [wizardMapeo, mapeoFilterAreaId, mapeoSearchTerm]);
 
   if (!isOpen) return null;
 
@@ -125,6 +139,9 @@ export default function AuditoriasModal({
     });
     setWizardAreas(DEFAULT_AREAS.map(a => ({ ...a })));
     setWizardMapeo(DEFAULT_NUMERALES_MAPEO.map(n => ({ ...n, areaIds: [...(n.areaIds || [])] })));
+    setMapeoFilterAreaId('ALL');
+    setMapeoSearchTerm('');
+    setEditingMapeoNumeralId(null);
     setIsFormOpen(true);
   };
 
@@ -149,6 +166,7 @@ export default function AuditoriasModal({
     setIsFormOpen(false);
     setEditingAuditId(null);
     setCreationStep(1);
+    setEditingMapeoNumeralId(null);
   };
 
   // Gestión de Áreas en Paso 2
@@ -182,19 +200,62 @@ export default function AuditoriasModal({
     setEditingAreaName('');
   };
 
-  // Gestión de Mapeo en Paso 3
-  const handleToggleAreaForNumeral = (numeralId, areaId) => {
-    setWizardMapeo(wizardMapeo.map(n => {
-      if (n.id !== numeralId) return n;
-      const currentAreaIds = n.areaIds || [];
-      const hasArea = currentAreaIds.includes(areaId);
-      return {
-        ...n,
-        areaIds: hasArea 
-          ? currentAreaIds.filter(id => id !== areaId)
-          : [...currentAreaIds, areaId]
+  // Gestión de Numerales en Paso 3 (exactamente como MapeoModal)
+  const handleStartCreateNumeral = () => {
+    setEditingMapeoNumeralId('new');
+    setMapeoCodigo('');
+    setMapeoRequisito('');
+    setMapeoSelectedAreaIds(mapeoFilterAreaId !== 'ALL' ? [mapeoFilterAreaId] : (wizardAreas[0] ? [wizardAreas[0].id] : []));
+  };
+
+  const handleStartEditNumeral = (numeral) => {
+    setEditingMapeoNumeralId(numeral.id);
+    setMapeoCodigo(numeral.codigo);
+    setMapeoRequisito(numeral.requisito || '');
+    setMapeoSelectedAreaIds(numeral.areaIds || []);
+  };
+
+  const handleCancelMapeoForm = () => {
+    setEditingMapeoNumeralId(null);
+    setMapeoCodigo('');
+    setMapeoRequisito('');
+    setMapeoSelectedAreaIds([]);
+  };
+
+  const handleToggleAreaCheckbox = (areaId) => {
+    if (mapeoSelectedAreaIds.includes(areaId)) {
+      setMapeoSelectedAreaIds(mapeoSelectedAreaIds.filter(id => id !== areaId));
+    } else {
+      setMapeoSelectedAreaIds([...mapeoSelectedAreaIds, areaId]);
+    }
+  };
+
+  const handleSaveMapeoForm = (e) => {
+    e.preventDefault();
+    if (!mapeoCodigo.trim() || !mapeoRequisito.trim()) return;
+
+    if (editingMapeoNumeralId === 'new') {
+      const newNumeral = {
+        id: `num-${Date.now()}`,
+        codigo: mapeoCodigo.trim(),
+        requisito: mapeoRequisito.trim(),
+        areaIds: mapeoSelectedAreaIds
       };
-    }));
+      setWizardMapeo([...wizardMapeo, newNumeral]);
+    } else {
+      const updated = wizardMapeo.map(n =>
+        n.id === editingMapeoNumeralId
+          ? { ...n, codigo: mapeoCodigo.trim(), requisito: mapeoRequisito.trim(), areaIds: mapeoSelectedAreaIds }
+          : n
+      );
+      setWizardMapeo(updated);
+    }
+    handleCancelMapeoForm();
+  };
+
+  const handleDeleteMapeoNumeral = (id) => {
+    setWizardMapeo(wizardMapeo.filter(n => n.id !== id));
+    if (editingMapeoNumeralId === id) handleCancelMapeoForm();
   };
 
   // Guardar y Finalizar Auditoría
@@ -593,89 +654,221 @@ export default function AuditoriasModal({
                 </div>
               )}
 
-              {/* PASO 3: CREAR MAPEO DE NUMERALES */}
+              {/* PASO 3: CREAR MAPEO (EXACTAMENTE IGUAL A MAPEO MODAL) */}
               {creationStep === 3 && (
                 <div className="space-y-4 animate-fadeIn">
-                  <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h5 className="font-bold text-white text-xs">Asignación de Numerales ISO/IEC 17025 a las Áreas</h5>
-                      <p className="text-[11px] text-slate-400">
-                        Haga clic en las etiquetas de áreas para asignar o desasignar los numerales de la norma.
-                      </p>
+                  
+                  {/* Filter and Action Bar idéntico a MapeoModal */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
+                    <div className="flex flex-wrap items-center gap-3 flex-1">
+                      
+                      {/* Desplegable de Filtro de Área */}
+                      <div className="flex items-center gap-2 min-w-[200px]">
+                        <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+                        <select
+                          value={mapeoFilterAreaId}
+                          onChange={(e) => setMapeoFilterAreaId(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="ALL">Todas las Áreas</option>
+                          {wizardAreas.map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Buscador de código o requisito */}
+                      <div className="flex items-center gap-2 flex-1 min-w-[220px] relative">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Buscar código o texto del requisito..."
+                          value={mapeoSearchTerm}
+                          onChange={(e) => setMapeoSearchTerm(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
                     </div>
 
-                    <div className="w-64 relative">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Buscar numeral o requisito..."
-                        value={mapeoSearchTerm}
-                        onChange={(e) => setMapeoSearchTerm(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Tabla interactiva de mapeo */}
-                  <div className="max-h-[340px] overflow-y-auto custom-scrollbar border border-slate-800 rounded-2xl bg-slate-900/50">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead className="sticky top-0 bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold z-10">
-                        <tr>
-                          <th className="py-2.5 px-3 w-20">Código</th>
-                          <th className="py-2.5 px-3">Requisito Normativo</th>
-                          <th className="py-2.5 px-3 w-72">Áreas Responsables Asignadas</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {filteredWizardMapeo.map((num) => {
-                          const assignedIds = num.areaIds || [];
-
-                          return (
-                            <tr key={num.id} className="hover:bg-indigo-950/20 transition-colors">
-                              <td className="py-2.5 px-3 align-top font-mono font-bold text-indigo-400">
-                                {num.codigo}
-                              </td>
-                              <td className="py-2.5 px-3 align-top text-slate-300 leading-relaxed text-[11.5px]">
-                                {num.requisito}
-                              </td>
-                              <td className="py-2.5 px-3 align-top">
-                                <div className="flex flex-wrap gap-1">
-                                  {wizardAreas.map((area) => {
-                                    const isAssigned = assignedIds.includes(area.id);
-
-                                    return (
-                                      <button
-                                        key={area.id}
-                                        type="button"
-                                        onClick={() => handleToggleAreaForNumeral(num.id, area.id)}
-                                        className={`px-2 py-0.5 rounded-md text-[10.5px] font-medium border transition-all ${
-                                          isAssigned
-                                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                                            : 'bg-slate-950/80 text-slate-500 border-slate-800 hover:border-slate-600 hover:text-slate-300'
-                                        }`}
-                                      >
-                                        {area.nombre}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-800">
                     <button
                       type="button"
-                      onClick={() => setCreationStep(2)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold"
+                      onClick={handleStartCreateNumeral}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition-all transform active:scale-95 shrink-0"
                     >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>Anterior: Auditores</span>
+                      <Plus className="w-4 h-4" />
+                      <span>Nuevo Numeral</span>
                     </button>
+                  </div>
+
+                  {/* Formulario de Creación / Edición de Numeral (idéntico a MapeoModal) */}
+                  {editingMapeoNumeralId && (
+                    <form onSubmit={handleSaveMapeoForm} className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-5 space-y-4 animate-fadeIn shadow-xl">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                          {editingMapeoNumeralId === 'new' ? 'Registrar Nuevo Numeral' : 'Editar Numeral y Áreas Asignadas'}
+                        </h4>
+                        <button type="button" onClick={handleCancelMapeoForm} className="text-slate-500 hover:text-slate-300">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div className="sm:col-span-1">
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Código / Numeral:</label>
+                          <input
+                            type="text"
+                            value={mapeoCodigo}
+                            onChange={(e) => setMapeoCodigo(e.target.value)}
+                            placeholder="Ej. 4.1.1"
+                            className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono font-bold focus:outline-none focus:border-indigo-500"
+                            autoFocus
+                          />
+                        </div>
+
+                        <div className="sm:col-span-3">
+                          <label className="block text-[11px] font-semibold text-slate-400 mb-1">Texto del Requisito:</label>
+                          <input
+                            type="text"
+                            value={mapeoRequisito}
+                            onChange={(e) => setMapeoRequisito(e.target.value)}
+                            placeholder="Texto completo de la exigencia ISO/IEC 17025..."
+                            className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-2">
+                          Seleccione las Áreas o Equipos que deben auditar este numeral:
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                          {wizardAreas.map(a => {
+                            const isChecked = mapeoSelectedAreaIds.includes(a.id);
+                            return (
+                              <button
+                                key={a.id}
+                                type="button"
+                                onClick={() => handleToggleAreaCheckbox(a.id)}
+                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all ${
+                                  isChecked 
+                                    ? 'bg-indigo-600/25 text-indigo-200 border border-indigo-500/40 font-semibold shadow-sm' 
+                                    : 'text-slate-400 hover:bg-slate-800 border border-transparent'
+                                }`}
+                              >
+                                {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-400 shrink-0" /> : <Square className="w-4 h-4 text-slate-600 shrink-0" />}
+                                <span className="truncate">{a.nombre}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-1 border-t border-slate-800">
+                        <button
+                          type="button"
+                          onClick={handleCancelMapeoForm}
+                          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition-all"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Guardar Numeral</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Tabla de Numerales Mapeados (idéntica a MapeoModal) */}
+                  <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead className="sticky top-0 bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold z-10">
+                          <tr>
+                            <th className="py-3 px-4 w-28">Código</th>
+                            <th className="py-3 px-4">Requisito ISO/IEC 17025</th>
+                            <th className="py-3 px-4 w-64">Áreas Asignadas</th>
+                            <th className="py-3 px-4 w-20 text-center">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/70 font-sans">
+                          {filteredWizardMapeo.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="py-8 text-center text-slate-500 italic">
+                                No se encontraron numerales con el filtro actual.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredWizardMapeo.map((n) => (
+                              <tr key={n.id} className="hover:bg-slate-900/40 transition-colors align-top">
+                                <td className="py-3.5 px-4 font-mono font-bold text-indigo-400">
+                                  {n.codigo}
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-200 leading-relaxed">
+                                  {n.requisito}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <div className="flex flex-wrap gap-1">
+                                    {(n.areaIds || []).map(aId => {
+                                      const aObj = wizardAreas.find(a => a.id === aId);
+                                      if (!aObj) return null;
+                                      return (
+                                        <span key={aId} className="px-2 py-0.5 rounded-lg bg-indigo-600/15 text-indigo-300 border border-indigo-500/20 text-[10.5px] font-medium">
+                                          {aObj.nombre}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEditNumeral(n)}
+                                      className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all"
+                                      title="Editar numeral y asignación de áreas"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteMapeoNumeral(n.id)}
+                                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                                      title="Eliminar del mapeo"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Footer de navegación del Paso 3 */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setCreationStep(2)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Anterior: Auditores</span>
+                      </button>
+
+                      <span className="text-xs text-slate-400 font-mono">
+                        {filteredWizardMapeo.length} numerales listados
+                      </span>
+                    </div>
 
                     <button
                       type="button"
@@ -686,6 +879,7 @@ export default function AuditoriasModal({
                       <span>✓ Finalizar y Crear Auditoría</span>
                     </button>
                   </div>
+
                 </div>
               )}
 
