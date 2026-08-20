@@ -600,6 +600,7 @@ export default function App() {
                 onDeleteAgent={handleDeleteAgent}
                 onAuditComplete={handleAuditComplete}
                 onGoToResults={() => setStep(4)}
+                currentUser={currentUser}
               />
             )}
 

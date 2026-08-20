@@ -14,8 +14,10 @@ export default function MotorAnalisisSection({
   onOpenAgentManager,
   onDeleteAgent,
   onAuditComplete,
-  onGoToResults
+  onGoToResults,
+  currentUser
 }) {
+  const isSuperAuditor = currentUser?.role === 'SUPER_AUDITOR';
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentAnalyzingIndex, setCurrentAnalyzingIndex] = useState(-1);
   const [progressPercent, setProgressPercent] = useState(0);
@@ -155,13 +157,15 @@ export default function MotorAnalisisSection({
             <Bot className="w-5 h-5 text-indigo-400" />
             <h3 className="text-sm font-bold text-white">Agentes de Auditoría IA</h3>
           </div>
-          <button
-            onClick={() => onOpenAgentManager({ mode: 'CREATE' })}
-            className="flex items-center gap-1.5 text-xs text-white font-bold bg-indigo-600 hover:bg-indigo-500 px-3.5 py-1.5 rounded-xl shadow-md transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Crear Agente</span>
-          </button>
+          {isSuperAuditor && (
+            <button
+              onClick={() => onOpenAgentManager({ mode: 'CREATE' })}
+              className="flex items-center gap-1.5 text-xs text-white font-bold bg-indigo-600 hover:bg-indigo-500 px-3.5 py-1.5 rounded-xl shadow-md transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Crear Agente</span>
+            </button>
+          )}
         </div>
 
         {/* Agent Selector Grid */}
@@ -188,31 +192,33 @@ export default function MotorAnalisisSection({
                     </h4>
                   </div>
                   
-                  {/* Actions: Edit & Delete */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenAgentManager({ mode: 'EDIT', targetId: ag.id });
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/20 rounded-lg transition-all"
-                      title="Editar instrucciones de este Agente"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                    {agents.length > 1 && (
+                  {/* Actions: Edit & Delete (Solo para Super Auditor) */}
+                  {isSuperAuditor && (
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDeleteAgent(ag.id);
+                          onOpenAgentManager({ mode: 'EDIT', targetId: ag.id });
                         }}
-                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
-                        title="Eliminar este Agente"
+                        className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/20 rounded-lg transition-all"
+                        title="Editar instrucciones de este Agente"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Edit3 className="w-3.5 h-3.5" />
                       </button>
-                    )}
-                  </div>
+                      {agents.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteAgent(ag.id);
+                          }}
+                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                          title="Eliminar este Agente"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {ag.descripcion && (
