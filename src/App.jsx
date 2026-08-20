@@ -187,8 +187,8 @@ export default function App() {
       fechaFin: formData.fechaFin,
       estado: formData.estado,
       observacionesGenerales: formData.observacionesGenerales,
-      areas: formData.cloneFromCurrent ? areas : DEFAULT_AREAS,
-      mapeoNumerales: formData.cloneFromCurrent ? mapeoNumerales : DEFAULT_NUMERALES_MAPEO,
+      areas: formData.customAreas || (formData.cloneFromCurrent ? areas : DEFAULT_AREAS),
+      mapeoNumerales: formData.customMapeo || (formData.cloneFromCurrent ? mapeoNumerales : DEFAULT_NUMERALES_MAPEO),
       evaluationsHistory: {},
       evidencias: [],
       auditResult: null
