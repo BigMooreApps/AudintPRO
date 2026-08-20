@@ -1019,17 +1019,6 @@ export default function AuditoriasModal({
 
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-3.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <span>{auditCycles.length} Ciclos de Auditoría Registrados</span>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl font-semibold transition-all"
-          >
-            Cerrar
-          </button>
-        </div>
-
       </div>
     </div>
   );
