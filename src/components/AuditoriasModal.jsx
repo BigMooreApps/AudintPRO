@@ -33,17 +33,6 @@ import {
 import { AUDIT_TYPES, createDefaultAuditCycle } from '../engine/auditCyclesService';
 import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO } from '../data/defaultMapeo';
 
-const COLOR_OPTIONS = [
-  { id: 'indigo', label: 'Índigo', bg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
-  { id: 'emerald', label: 'Verde', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-  { id: 'blue', label: 'Azul', bg: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-  { id: 'cyan', label: 'Cian', bg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
-  { id: 'purple', label: 'Púrpura', bg: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-  { id: 'amber', label: 'Ámbar', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-  { id: 'rose', label: 'Rosa', bg: 'bg-rose-500/20 text-rose-300 border-rose-500/30' },
-  { id: 'teal', label: 'Turquesa', bg: 'bg-teal-500/20 text-teal-300 border-teal-500/30' }
-];
-
 export default function AuditoriasModal({
   isOpen,
   onClose,
@@ -76,7 +65,6 @@ export default function AuditoriasModal({
   // Áreas personalizadas para la auditoría (Paso 2)
   const [wizardAreas, setWizardAreas] = useState(DEFAULT_AREAS);
   const [newAreaName, setNewAreaName] = useState('');
-  const [newAreaColor, setNewAreaColor] = useState('indigo');
   const [editingAreaId, setEditingAreaId] = useState(null);
   const [editingAreaName, setEditingAreaName] = useState('');
 
@@ -183,7 +171,7 @@ export default function AuditoriasModal({
     const newArea = {
       id: newId,
       nombre: newAreaName.trim(),
-      color: newAreaColor
+      color: 'indigo'
     };
     setWizardAreas([...wizardAreas, newArea]);
     setNewAreaName('');
@@ -296,10 +284,10 @@ export default function AuditoriasModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-5xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-5xl w-full h-[720px] max-h-[92vh] shadow-2xl overflow-hidden flex flex-col text-slate-100 animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
               <FolderKanban className="w-5 h-5" />
@@ -322,7 +310,7 @@ export default function AuditoriasModal({
 
         {/* Filter and Action Bar (Solo si no está en el asistente) */}
         {!isFormOpen && (
-          <div className="px-6 py-3.5 bg-slate-950/60 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-6 py-3.5 bg-slate-950/60 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
             <div className="flex-1 min-w-[240px] relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -344,17 +332,17 @@ export default function AuditoriasModal({
           </div>
         )}
 
-        {/* Body Content */}
-        <div className="p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar text-xs">
+        {/* Body Content (Fixed Height Container) */}
+        <div className="p-6 flex-1 flex flex-col overflow-hidden text-xs">
           
           {/* ========================================================
               FLUJO GUIADO DE 3 PASOS (CREAR Y EDITAR AUDITORÍA)
              ======================================================== */}
           {isFormOpen && (
-            <div className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-5 space-y-5 shadow-xl animate-fadeIn">
+            <div className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-5 shadow-xl animate-fadeIn flex flex-col h-full overflow-hidden justify-between">
 
-              {/* Progress Steps Indicators */}
-              <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800">
+              {/* Progress Steps Indicators (Barra fija superior) */}
+              <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800 shrink-0 mb-4">
                 <button
                   type="button"
                   onClick={() => setCreationStep(1)}
@@ -397,104 +385,106 @@ export default function AuditoriasModal({
 
               {/* PASO 1: PARÁMETROS GENERALES */}
               {creationStep === 1 && (
-                <div className="space-y-4 animate-fadeIn">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Código de Auditoría:</label>
-                      <input
-                        type="text"
-                        value={formData.codigo}
-                        onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                        placeholder="Ej. AUD-2026-01"
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono font-bold focus:outline-none focus:border-indigo-500"
-                        required
-                      />
+                <div className="flex-1 flex flex-col justify-between overflow-y-auto space-y-4 animate-fadeIn pr-1 custom-scrollbar">
+                  <div className="space-y-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Código de Auditoría:</label>
+                        <input
+                          type="text"
+                          value={formData.codigo}
+                          onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                          placeholder="Ej. AUD-2026-01"
+                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono font-bold focus:outline-none focus:border-indigo-500"
+                          required
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Nombre Descriptivo de la Auditoría:</label>
+                        <input
+                          type="text"
+                          value={formData.nombre}
+                          onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                          placeholder="Ej. Auditoría Interna Anual ISO/IEC 17025 - 2026"
+                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-semibold focus:outline-none focus:border-indigo-500"
+                          required
+                        />
+                      </div>
                     </div>
 
-                    <div className="sm:col-span-2">
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Nombre Descriptivo de la Auditoría:</label>
-                      <input
-                        type="text"
-                        value={formData.nombre}
-                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                        placeholder="Ej. Auditoría Interna Anual ISO/IEC 17025 - 2026"
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-semibold focus:outline-none focus:border-indigo-500"
-                        required
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Tipo de Auditoría:</label>
+                        <select
+                          value={formData.tipo}
+                          onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
+                        >
+                          {AUDIT_TYPES.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Auditor Líder:</label>
+                        <input
+                          type="text"
+                          value={formData.auditorLider}
+                          onChange={(e) => setFormData({ ...formData, auditorLider: e.target.value })}
+                          placeholder="Nombre del Auditor Líder"
+                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Laboratorio / Alcance:</label>
+                        <input
+                          type="text"
+                          value={formData.laboratorio}
+                          onChange={(e) => setFormData({ ...formData, laboratorio: e.target.value })}
+                          placeholder="Nombre del Laboratorio"
+                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Fecha de Inicio Programada:</label>
+                        <input
+                          type="date"
+                          value={formData.fechaInicio}
+                          onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">Fecha de Cierre Estimada (Opcional):</label>
+                        <input
+                          type="date"
+                          value={formData.fechaFin}
+                          onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
+                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Observaciones / Alcance Específico:</label>
+                      <textarea
+                        rows={3}
+                        value={formData.observacionesGenerales}
+                        onChange={(e) => setFormData({ ...formData, observacionesGenerales: e.target.value })}
+                        placeholder="Detalles sobre ensayos, calibraciones, matrices o requisitos a auditar..."
+                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Tipo de Auditoría:</label>
-                      <select
-                        value={formData.tipo}
-                        onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
-                      >
-                        {AUDIT_TYPES.map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Auditor Líder:</label>
-                      <input
-                        type="text"
-                        value={formData.auditorLider}
-                        onChange={(e) => setFormData({ ...formData, auditorLider: e.target.value })}
-                        placeholder="Nombre del Auditor Líder"
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Laboratorio / Alcance:</label>
-                      <input
-                        type="text"
-                        value={formData.laboratorio}
-                        onChange={(e) => setFormData({ ...formData, laboratorio: e.target.value })}
-                        placeholder="Nombre del Laboratorio"
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Fecha de Inicio Programada:</label>
-                      <input
-                        type="date"
-                        value={formData.fechaInicio}
-                        onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Fecha de Cierre Estimada (Opcional):</label>
-                      <input
-                        type="date"
-                        value={formData.fechaFin}
-                        onChange={(e) => setFormData({ ...formData, fechaFin: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Observaciones / Alcance Específico:</label>
-                    <textarea
-                      rows={2}
-                      value={formData.observacionesGenerales}
-                      onChange={(e) => setFormData({ ...formData, observacionesGenerales: e.target.value })}
-                      placeholder="Detalles sobre ensayos, calibraciones, matrices o requisitos a auditar..."
-                      className="w-full bg-slate-900 border border-slate-700/80 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800 mt-auto shrink-0">
                     <button
                       type="button"
                       onClick={handleCancelForm}
@@ -519,9 +509,10 @@ export default function AuditoriasModal({
 
               {/* PASO 2: CREAR / EDITAR AUDITORES (ÁREAS DEL LABORATORIO) */}
               {creationStep === 2 && (
-                <div className="space-y-4 animate-fadeIn">
+                <div className="flex-1 flex flex-col justify-between overflow-hidden animate-fadeIn space-y-3">
+                  
                   {/* Formulario rápido para agregar área */}
-                  <form onSubmit={handleAddArea} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center gap-2">
+                  <form onSubmit={handleAddArea} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center gap-2 shrink-0">
                     <input
                       type="text"
                       placeholder="Nombre de la nueva área / equipo auditor..."
@@ -539,8 +530,8 @@ export default function AuditoriasModal({
                     </button>
                   </form>
 
-                  {/* Lista vertical de áreas configuradas */}
-                  <div className="space-y-2 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
+                  {/* Lista vertical de áreas configuradas (con scroll interno fluido) */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1 min-h-[260px]">
                     {wizardAreas.map((area) => {
                       const isEditing = editingAreaId === area.id;
 
@@ -603,7 +594,7 @@ export default function AuditoriasModal({
                     })}
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-800 mt-auto shrink-0">
                     <button
                       type="button"
                       onClick={() => setCreationStep(1)}
@@ -627,19 +618,19 @@ export default function AuditoriasModal({
 
               {/* PASO 3: CREAR / EDITAR MAPEO (EXACTAMENTE IGUAL A MAPEO MODAL) */}
               {creationStep === 3 && (
-                <div className="space-y-4 animate-fadeIn">
+                <div className="flex-1 flex flex-col justify-between overflow-hidden animate-fadeIn space-y-3">
                   
                   {/* Filter and Action Bar idéntico a MapeoModal */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 p-3 rounded-2xl shrink-0">
                     <div className="flex flex-wrap items-center gap-3 flex-1">
                       
                       {/* Desplegable de Filtro de Área */}
-                      <div className="flex items-center gap-2 min-w-[200px]">
+                      <div className="flex items-center gap-2 min-w-[180px]">
                         <Filter className="w-4 h-4 text-slate-400 shrink-0" />
                         <select
                           value={mapeoFilterAreaId}
                           onChange={(e) => setMapeoFilterAreaId(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
                         >
                           <option value="ALL">Todas las Áreas</option>
                           {wizardAreas.map(a => (
@@ -651,14 +642,14 @@ export default function AuditoriasModal({
                       </div>
 
                       {/* Buscador de código o requisito */}
-                      <div className="flex items-center gap-2 flex-1 min-w-[220px] relative">
+                      <div className="flex items-center gap-2 flex-1 min-w-[200px] relative">
                         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
                           placeholder="Buscar código o texto del requisito..."
                           value={mapeoSearchTerm}
                           onChange={(e) => setMapeoSearchTerm(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                         />
                       </div>
                     </div>
@@ -666,16 +657,16 @@ export default function AuditoriasModal({
                     <button
                       type="button"
                       onClick={handleStartCreateNumeral}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition-all transform active:scale-95 shrink-0"
+                      className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition-all transform active:scale-95 shrink-0"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Nuevo Numeral</span>
                     </button>
                   </div>
 
-                  {/* Formulario de Creación / Edición de Numeral (idéntico a MapeoModal) */}
+                  {/* Formulario de Creación / Edición de Numeral (si aplica) */}
                   {editingMapeoNumeralId && (
-                    <form onSubmit={handleSaveMapeoForm} className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-5 space-y-4 animate-fadeIn shadow-xl">
+                    <form onSubmit={handleSaveMapeoForm} className="bg-slate-950 border border-indigo-500/30 rounded-2xl p-4 space-y-3 animate-fadeIn shadow-xl shrink-0">
                       <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wider">
                           {editingMapeoNumeralId === 'new' ? 'Registrar Nuevo Numeral' : 'Editar Numeral y Áreas Asignadas'}
@@ -693,7 +684,7 @@ export default function AuditoriasModal({
                             value={mapeoCodigo}
                             onChange={(e) => setMapeoCodigo(e.target.value)}
                             placeholder="Ej. 4.1.1"
-                            className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono font-bold focus:outline-none focus:border-indigo-500"
+                            className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-indigo-300 font-mono font-bold focus:outline-none focus:border-indigo-500"
                             autoFocus
                           />
                         </div>
@@ -705,16 +696,16 @@ export default function AuditoriasModal({
                             value={mapeoRequisito}
                             onChange={(e) => setMapeoRequisito(e.target.value)}
                             placeholder="Texto completo de la exigencia ISO/IEC 17025..."
-                            className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                            className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-400 mb-2">
+                        <label className="block text-[11px] font-semibold text-slate-400 mb-1">
                           Seleccione las Áreas o Equipos que deben auditar este numeral:
                         </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 max-h-[100px] overflow-y-auto custom-scrollbar">
                           {wizardAreas.map(a => {
                             const isChecked = mapeoSelectedAreaIds.includes(a.id);
                             return (
@@ -722,13 +713,13 @@ export default function AuditoriasModal({
                                 key={a.id}
                                 type="button"
                                 onClick={() => handleToggleAreaCheckbox(a.id)}
-                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all ${
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-left text-xs transition-all ${
                                   isChecked 
                                     ? 'bg-indigo-600/25 text-indigo-200 border border-indigo-500/40 font-semibold shadow-sm' 
                                     : 'text-slate-400 hover:bg-slate-800 border border-transparent'
                                 }`}
                               >
-                                {isChecked ? <CheckSquare className="w-4 h-4 text-indigo-400 shrink-0" /> : <Square className="w-4 h-4 text-slate-600 shrink-0" />}
+                                {isChecked ? <CheckSquare className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> : <Square className="w-3.5 h-3.5 text-slate-600 shrink-0" />}
                                 <span className="truncate">{a.nombre}</span>
                               </button>
                             );
@@ -740,13 +731,13 @@ export default function AuditoriasModal({
                         <button
                           type="button"
                           onClick={handleCancelMapeoForm}
-                          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
                         >
                           Cancelar
                         </button>
                         <button
                           type="submit"
-                          className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition-all"
+                          className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition-all"
                         >
                           <Check className="w-3.5 h-3.5" />
                           <span>Guardar Numeral</span>
@@ -755,16 +746,16 @@ export default function AuditoriasModal({
                     </form>
                   )}
 
-                  {/* Tabla de Numerales Mapeados (idéntica a MapeoModal) */}
-                  <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
-                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                  {/* Tabla de Numerales Mapeados */}
+                  <div className="flex-1 bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-lg flex flex-col min-h-[220px]">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead className="sticky top-0 bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold z-10">
                           <tr>
-                            <th className="py-3 px-4 w-28">Código</th>
-                            <th className="py-3 px-4">Requisito ISO/IEC 17025</th>
-                            <th className="py-3 px-4 w-64">Áreas Asignadas</th>
-                            <th className="py-3 px-4 w-20 text-center">Acciones</th>
+                            <th className="py-2.5 px-4 w-28">Código</th>
+                            <th className="py-2.5 px-4">Requisito ISO/IEC 17025</th>
+                            <th className="py-2.5 px-4 w-64">Áreas Asignadas</th>
+                            <th className="py-2.5 px-4 w-20 text-center">Acciones</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/70 font-sans">
@@ -777,13 +768,13 @@ export default function AuditoriasModal({
                           ) : (
                             filteredWizardMapeo.map((n) => (
                               <tr key={n.id} className="hover:bg-slate-900/40 transition-colors align-top">
-                                <td className="py-3.5 px-4 font-mono font-bold text-indigo-400">
+                                <td className="py-3 px-4 font-mono font-bold text-indigo-400">
                                   {n.codigo}
                                 </td>
-                                <td className="py-3.5 px-4 text-slate-200 leading-relaxed">
+                                <td className="py-3 px-4 text-slate-200 leading-relaxed">
                                   {n.requisito}
                                 </td>
-                                <td className="py-3.5 px-4">
+                                <td className="py-3 px-4">
                                   <div className="flex flex-wrap gap-1">
                                     {(n.areaIds || []).map(aId => {
                                       const aObj = wizardAreas.find(a => a.id === aId);
@@ -796,7 +787,7 @@ export default function AuditoriasModal({
                                     })}
                                   </div>
                                 </td>
-                                <td className="py-3.5 px-4 text-center">
+                                <td className="py-3 px-4 text-center">
                                   <div className="flex items-center justify-center gap-1">
                                     <button
                                       type="button"
@@ -825,7 +816,7 @@ export default function AuditoriasModal({
                   </div>
 
                   {/* Footer de navegación del Paso 3 */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800 mt-auto shrink-0">
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
@@ -859,7 +850,7 @@ export default function AuditoriasModal({
 
           {/* Listado de Auditorías Existentes */}
           {!isFormOpen && (
-            <div className="space-y-3">
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1">
               {filteredAudits.length === 0 ? (
                 <div className="p-8 text-center bg-slate-950/60 border border-slate-800 rounded-2xl text-slate-500">
                   <FolderKanban className="w-8 h-8 mx-auto mb-2 opacity-40 text-indigo-400" />
