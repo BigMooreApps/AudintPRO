@@ -817,20 +817,14 @@ export default function AuditoriasModal({
 
                   {/* Footer de navegación del Paso 3 */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800 mt-auto shrink-0">
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setCreationStep(2)}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Anterior: Auditores</span>
-                      </button>
-
-                      <span className="text-xs text-slate-400 font-mono">
-                        {filteredWizardMapeo.length} numerales listados
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCreationStep(2)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Anterior: Auditores</span>
+                    </button>
 
                     <button
                       type="button"
