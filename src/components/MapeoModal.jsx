@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Map, Plus, Trash2, Edit3, Check, Filter, CheckSquare, Square, Search } from 'lucide-react';
 import { compareNumeralCodes } from '../data/defaultMapeo';
+import ConfirmDialogModal from './ConfirmDialogModal';
 
 export default function MapeoModal({
   isOpen,
@@ -18,6 +19,14 @@ export default function MapeoModal({
   const [codigo, setCodigo] = useState('');
   const [requisito, setRequisito] = useState('');
   const [selectedAreaIds, setSelectedAreaIds] = useState([]);
+
+  // Estado para doble confirmación
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
 
   if (!isOpen) return null;
 
@@ -76,12 +85,19 @@ export default function MapeoModal({
     handleCancelForm();
   };
 
-  const handleDeleteNumeral = (id) => {
-    if (confirm('¿Está seguro de eliminar este subnumeral del mapeo general?')) {
-      const updated = currentMapeo.filter(n => n.id !== id);
-      saveMapeoHandler(updated);
-      if (editingNumeralId === id) handleCancelForm();
-    }
+  const executeDeleteNumeral = (id) => {
+    const updated = currentMapeo.filter(n => n.id !== id);
+    saveMapeoHandler(updated);
+    if (editingNumeralId === id) handleCancelForm();
+  };
+
+  const handleDeleteNumeral = (numeral) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: `¿Eliminar Numeral "${numeral.codigo}"?`,
+      message: `Está a punto de eliminar el requisito "${numeral.codigo}: ${numeral.requisito?.substring(0, 60)}..." del mapeo general.`,
+      onConfirm: () => executeDeleteNumeral(numeral.id)
+    });
   };
 
   const filteredMapeo = currentMapeo.filter(n => {
@@ -294,7 +310,7 @@ export default function MapeoModal({
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteNumeral(n.id)}
+                            onClick={() => handleDeleteNumeral(n)}
                             className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
                             title="Eliminar del mapeo"
                           >
@@ -324,6 +340,21 @@ export default function MapeoModal({
         </div>
 
       </div>
+
+      {/* Doble Confirmación con Estilos de la App */}
+      <ConfirmDialogModal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type="DANGER"
+        confirmText="Continuar con la Eliminación"
+        cancelText="Cancelar"
+        onConfirm={() => {
+          if (confirmDialog.onConfirm) confirmDialog.onConfirm();
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }}
+      />
     </div>
   );
 }

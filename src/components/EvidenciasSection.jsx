@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { UploadCloud, File, Trash2, Check, Layers, Eye, EyeOff, X, AlertCircle } from 'lucide-react';
 import { parseDocument } from '../engine/textExtractor';
+import ConfirmDialogModal from './ConfirmDialogModal';
 
 function RenderExtractedContent({ item, docType }) {
   // Si tablaData está presente (desde parseExcel o parseCSV)
@@ -88,6 +89,14 @@ export default function EvidenciasSection({ evidencias, setEvidencias, onNextSte
   const [isUploading, setIsUploading] = useState(false);
   const [selectedPreviewDoc, setSelectedPreviewDoc] = useState(null);
 
+  // Estado para diálogo de doble confirmación
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
   // Upload user files
   const handleFilesUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -118,10 +127,18 @@ export default function EvidenciasSection({ evidencias, setEvidencias, onNextSte
     }
   };
 
-  // Remove uploaded evidence
-  const handleRemoveDoc = (id) => {
+  const executeRemoveDoc = (id) => {
     setEvidencias(evidencias.filter(e => e.id !== id));
     if (selectedPreviewDoc?.id === id) setSelectedPreviewDoc(null);
+  };
+
+  const handleRemoveDoc = (doc) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: `¿Eliminar "${doc.nombre}"?`,
+      message: `Está a punto de eliminar el archivo de evidencia "${doc.nombre}" (${doc.tipo}). Los fragmentos extraídos ya no serán utilizados para evaluar los numerales.`,
+      onConfirm: () => executeRemoveDoc(doc.id)
+    });
   };
 
   return (
@@ -255,7 +272,7 @@ export default function EvidenciasSection({ evidencias, setEvidencias, onNextSte
                         {isSelected ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveDoc(doc.id); }}
+                        onClick={(e) => { e.stopPropagation(); handleRemoveDoc(doc); }}
                         className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
                         title="Eliminar documento"
                       >
@@ -319,6 +336,21 @@ export default function EvidenciasSection({ evidencias, setEvidencias, onNextSte
           )}
         </div>
       </div>
+
+      {/* Modal de Doble Confirmación con Estilos y Colores de la App */}
+      <ConfirmDialogModal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type="DANGER"
+        confirmText="Continuar con la Eliminación"
+        cancelText="Cancelar"
+        onConfirm={() => {
+          if (confirmDialog.onConfirm) confirmDialog.onConfirm();
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }}
+      />
     </div>
   );
 }

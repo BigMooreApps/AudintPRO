@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Users, Plus, Trash2, Edit3, Check, Search, ShieldCheck } from 'lucide-react';
+import ConfirmDialogModal from './ConfirmDialogModal';
 
 export default function AuditoresModal({
   isOpen,
@@ -12,6 +13,14 @@ export default function AuditoresModal({
   const [searchTerm, setSearchTerm] = useState('');
   const [editingAreaId, setEditingAreaId] = useState(null);
   const [nombre, setNombre] = useState('');
+
+  // Estado para doble confirmación
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
 
   if (!isOpen) return null;
 
@@ -53,16 +62,29 @@ export default function AuditoresModal({
     handleCancelForm();
   };
 
-  const handleDeleteArea = (id) => {
+  const executeDeleteArea = (id) => {
+    const updated = areas.filter(a => a.id !== id);
+    saveAreasHandler(updated);
+    if (editingAreaId === id) handleCancelForm();
+  };
+
+  const handleDeleteArea = (area) => {
     if (areas.length <= 1) {
-      alert('Debe existir al menos un Área / Auditor en el sistema.');
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Acción No Permitida',
+        message: 'Debe existir al menos un Área de Auditoría en el sistema.',
+        type: 'ALERT'
+      });
       return;
     }
-    if (confirm('¿Está seguro de eliminar esta Área / Auditor?')) {
-      const updated = areas.filter(a => a.id !== id);
-      saveAreasHandler(updated);
-      if (editingAreaId === id) handleCancelForm();
-    }
+
+    setConfirmDialog({
+      isOpen: true,
+      title: `¿Eliminar Área "${area.nombre}"?`,
+      message: `Está a punto de eliminar el área "${area.nombre}". Esta acción afectará la asignación de auditores y numerales.`,
+      onConfirm: () => executeDeleteArea(area.id)
+    });
   };
 
   const getNumeralCountForArea = (areaId) => {
@@ -185,7 +207,7 @@ export default function AuditoresModal({
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDeleteArea(area.id)}
+                      onClick={() => handleDeleteArea(area)}
                       className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
                       title="Eliminar área"
                     >
@@ -212,6 +234,21 @@ export default function AuditoresModal({
         </div>
 
       </div>
+
+      {/* Modal de Doble Confirmación */}
+      <ConfirmDialogModal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type || 'DANGER'}
+        confirmText="Continuar con la Eliminación"
+        cancelText="Cancelar"
+        onConfirm={() => {
+          if (confirmDialog.onConfirm) confirmDialog.onConfirm();
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }}
+      />
     </div>
   );
 }

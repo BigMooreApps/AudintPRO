@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { AUDIT_TYPES, createDefaultAuditCycle } from '../engine/auditCyclesService';
 import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO, compareNumeralCodes } from '../data/defaultMapeo';
+import ConfirmDialogModal from './ConfirmDialogModal';
 
 export default function AuditoriasModal({
   isOpen,
@@ -48,6 +49,14 @@ export default function AuditoriasModal({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAuditId, setEditingAuditId] = useState(null); // 'new' | existingId
   const [creationStep, setCreationStep] = useState(1); // 1: Parámetros Generales, 2: Crear Auditores, 3: Crear Mapeo
+
+  // Estado para diálogo de doble confirmación
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
 
   // Form Fields (Paso 1)
   const [formData, setFormData] = useState({
@@ -200,6 +209,15 @@ export default function AuditoriasModal({
     })));
   };
 
+  const triggerDeleteArea = (area) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: `¿Eliminar Área "${area.nombre}"?`,
+      message: `Está a punto de eliminar el área de auditoría "${area.nombre}". Esta área será desvinculada de todos los numerales configurados.`,
+      onConfirm: () => handleDeleteArea(area.id)
+    });
+  };
+
   const handleSaveEditArea = (areaId) => {
     if (!editingAreaName.trim()) return;
     setWizardAreas(wizardAreas.map(a => a.id === areaId ? { 
@@ -268,6 +286,24 @@ export default function AuditoriasModal({
   const handleDeleteMapeoNumeral = (id) => {
     setWizardMapeo(wizardMapeo.filter(n => n.id !== id));
     if (editingMapeoNumeralId === id) handleCancelMapeoForm();
+  };
+
+  const triggerDeleteMapeoNumeral = (numeral) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: `¿Eliminar Numeral "${numeral.codigo}"?`,
+      message: `Está a punto de eliminar el requisito "${numeral.codigo}: ${numeral.requisito?.substring(0, 60)}...".`,
+      onConfirm: () => handleDeleteMapeoNumeral(numeral.id)
+    });
+  };
+
+  const triggerDeleteAudit = (audit) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: `¿Eliminar "${audit.nombre}"?`,
+      message: `Está a punto de eliminar el ciclo de auditoría "${audit.codigo}: ${audit.nombre}". Se eliminarán sus evaluaciones, áreas asignadas y configuraciones.`,
+      onConfirm: () => onDeleteAudit(audit.id)
+    });
   };
 
   // Guardar y Finalizar Auditoría (tanto para nueva como para edición)
@@ -630,8 +666,8 @@ export default function AuditoriasModal({
                             {wizardAreas.length > 1 && (
                               <button
                                 type="button"
-                                onClick={() => handleDeleteArea(area.id)}
-                                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg"
+                                onClick={() => triggerDeleteArea(area)}
+                                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
                                 title="Eliminar área"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -848,7 +884,7 @@ export default function AuditoriasModal({
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => handleDeleteMapeoNumeral(n.id)}
+                                      onClick={() => triggerDeleteMapeoNumeral(n)}
                                       className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
                                       title="Eliminar del mapeo"
                                     >
@@ -1013,7 +1049,7 @@ export default function AuditoriasModal({
                           {/* Eliminar (si hay más de una) */}
                           {auditCycles.length > 1 && (
                             <button
-                              onClick={() => onDeleteAudit(audit.id)}
+                              onClick={() => triggerDeleteAudit(audit)}
                               className="p-2 bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 rounded-xl transition-all"
                               title="Eliminar este ciclo de auditoría"
                             >
@@ -1053,6 +1089,20 @@ export default function AuditoriasModal({
         </div>
 
       </div>
+
+      <ConfirmDialogModal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type="DANGER"
+        confirmText="Continuar con la Eliminación"
+        cancelText="Cancelar"
+        onConfirm={() => {
+          if (confirmDialog.onConfirm) confirmDialog.onConfirm();
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }}
+      />
     </div>
   );
 }
