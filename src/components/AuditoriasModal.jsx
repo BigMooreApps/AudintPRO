@@ -978,16 +978,15 @@ export default function AuditoriasModal({
                         {/* Botones de Acción */}
                         <div className="flex flex-wrap items-center gap-2">
                           
-                          {/* Seleccionar / Abrir esta Auditoría */}
-                          {!isActive && (
-                            <button
-                              onClick={() => onSelectAudit(audit.id)}
-                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all transform active:scale-95"
-                            >
-                              <Play className="w-3.5 h-3.5 fill-white" />
-                              <span>Abrir Auditoría</span>
-                            </button>
-                          )}
+                          {/* Seleccionar / Abrir esta Auditoría (Siempre Visible) */}
+                          <button
+                            onClick={() => onSelectAudit(audit.id)}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all transform active:scale-95"
+                            title="Abrir esta auditoría e ir al Dashboard Principal"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-white" />
+                            <span>Abrir Auditoría</span>
+                          </button>
 
                           {/* Cerrar o Reabrir Ciclo */}
                           <button

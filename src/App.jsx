@@ -192,7 +192,7 @@ export default function App() {
     setEvaluationsHistoryState(targetAudit.evaluationsHistory || {});
     setSelectedAreaId(currentUser?.role === 'AUDITOR' ? currentUser.areaId : 'ALL');
     setStep(1);
-
+    setCurrentView('DASHBOARD');
     setIsAuditoriasModalOpen(false);
 
     setTimeout(() => {
