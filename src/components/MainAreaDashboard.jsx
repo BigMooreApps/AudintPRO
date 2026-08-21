@@ -42,6 +42,8 @@ export default function MainAreaDashboard({
 
   // Estado para colapsar/expandir la sección de áreas
   const [isAreaSectionExpanded, setIsAreaSectionExpanded] = useState(true);
+  // Estado para colapsar/expandir la sección de tabla de numerales
+  const [isTableSectionExpanded, setIsTableSectionExpanded] = useState(true);
 
   // Filtros interactivos para la tabla de numerales del Dashboard
   const [tableSearchTerm, setTableSearchTerm] = useState('');
@@ -485,18 +487,24 @@ export default function MainAreaDashboard({
       </div>
 
       {/* ========================================================
-          TABLA DE NUMERALES ASIGNADOS CON FILTROS DINÁMICOS
+          TABLA DE NUMERALES ASIGNADOS (COLAPSABLE / EXPANDIBLE)
          ======================================================== */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-4">
+      <div className={`bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl transition-all ${
+        isTableSectionExpanded ? 'p-6 sm:p-7 space-y-4' : 'p-4 sm:p-5'
+      }`}>
         
         {/* Encabezado de la tabla */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div 
+          onClick={() => setIsTableSectionExpanded(!isTableSectionExpanded)}
+          className="flex flex-wrap items-center justify-between gap-4 cursor-pointer select-none group"
+          title="Haga clic para expandir o reducir esta sección"
+        >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20">
+            <div className="p-2 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20 group-hover:bg-teal-500/20 group-hover:text-teal-300 transition-all">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">
+              <h3 className="text-base font-bold text-white group-hover:text-teal-300 transition-colors">
                 Numerales Asignados: {selectedAreaId === 'ALL' ? 'Todas las Áreas' : activeAreaStat?.area.nombre}
               </h3>
               <p className="text-xs text-slate-400">
@@ -505,138 +513,147 @@ export default function MainAreaDashboard({
             </div>
           </div>
 
-          <span className="text-xs font-mono font-semibold text-slate-400">
-            {filteredTableNumerals.length} de {baseAreaNumerals.length} Numerales
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono font-semibold text-slate-400">
+              {filteredTableNumerals.length} de {baseAreaNumerals.length} Numerales
+            </span>
+            <div className="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 group-hover:text-white group-hover:border-slate-700 transition-all">
+              {isTableSectionExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </div>
         </div>
 
-        {/* BARRA DE FILTROS Y BÚSQUEDA INTERACTIVA */}
-        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-          
-          {/* Buscador de texto o código */}
-          <div className="flex-1 min-w-[220px] relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Buscar por código (ej. 4.1.1) o texto..."
-              value={tableSearchTerm}
-              onChange={(e) => setTableSearchTerm(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
+        {isTableSectionExpanded && (
+          <div className="space-y-4 pt-2 border-t border-slate-800 animate-fadeIn">
+            {/* BARRA DE FILTROS Y BÚSQUEDA INTERACTIVA */}
+            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+              
+              {/* Buscador de texto o código */}
+              <div className="flex-1 min-w-[220px] relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar por código (ej. 4.1.1) o texto..."
+                  value={tableSearchTerm}
+                  onChange={(e) => setTableSearchTerm(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
 
-          {/* Filtro por Estado Auditoría */}
-          <div className="flex items-center gap-2 min-w-[200px]">
-            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-            <select
-              value={tableFilterEstado}
-              onChange={(e) => setTableFilterEstado(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
-            >
-              <option value="ALL">Todos los Estados</option>
-              <option value="CUMPLE">✓ Conformes (CUMPLE)</option>
-              <option value="SUBSANADO">✓ Subsanados (Cerrados)</option>
-              <option value="NO_CUMPLE">✕ No Conformes (NO CUMPLE)</option>
-              <option value="PENDIENTE_APROBAR">⏳ Pendientes por Aprobar</option>
-              <option value="PENDIENTE">⚪ Sin Evaluar (Pendiente)</option>
-            </select>
-          </div>
+              {/* Filtro por Estado Auditoría */}
+              <div className="flex items-center gap-2 min-w-[200px]">
+                <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+                <select
+                  value={tableFilterEstado}
+                  onChange={(e) => setTableFilterEstado(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="ALL">Todos los Estados</option>
+                  <option value="CUMPLE">✓ Conformes (CUMPLE)</option>
+                  <option value="SUBSANADO">✓ Subsanados (Cerrados)</option>
+                  <option value="NO_CUMPLE">✕ No Conformes (NO CUMPLE)</option>
+                  <option value="PENDIENTE_APROBAR">⏳ Pendientes por Aprobar</option>
+                  <option value="PENDIENTE">⚪ Sin Evaluar (Pendiente)</option>
+                </select>
+              </div>
 
-        </div>
+            </div>
 
-        {/* Tabla de Numerales */}
-        <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-900 text-slate-400 border-b border-slate-800 font-semibold">
-                  <th className="py-3 px-4 w-28">Código</th>
-                  <th className="py-3 px-4">Requisito Normativo</th>
-                  <th className="py-3 px-4 w-60">Áreas Responsables</th>
-                  <th className="py-3 px-4 w-52 text-center">Estado Auditoría</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
-                {filteredTableNumerals.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-8 text-center text-slate-500 italic">
-                      No se encontraron numerales con los filtros seleccionados.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTableNumerals.map((num) => {
-                    const evalItem = evaluationsHistory[num.codigo] || evaluationsHistory[num.id];
-                    const isSubsanado = evalItem?.estadoCompromiso === 'SUBSANADO';
-                    const isConfirmed = evalItem?.auditorConfirmado === true;
-                    const estado = evalItem ? (evalItem.estado || 'CUMPLE').toUpperCase() : 'PENDIENTE';
-
-                    return (
-                      <tr 
-                        key={num.id} 
-                        onClick={() => setSelectedDetailNumeral(num)}
-                        className="hover:bg-indigo-950/25 cursor-pointer transition-colors group select-none"
-                        title="Haga clic para ver el informe detallado de auditoría"
-                      >
-                        <td className="py-3.5 px-4 align-top font-mono font-bold text-indigo-400 group-hover:text-indigo-300 flex items-center gap-1.5">
-                          <Eye className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-indigo-400 transition-opacity" />
-                          <span>{num.codigo}</span>
-                        </td>
-                        <td className="py-3.5 px-4 align-top text-slate-200 group-hover:text-white leading-relaxed">
-                          {num.requisito}
-                        </td>
-                        <td className="py-3.5 px-4 align-top">
-                          <div className="flex flex-wrap gap-1">
-                            {(num.areaIds || []).map(aId => {
-                              const areaObj = areas.find(a => a.id === aId);
-                              if (!areaObj) return null;
-                              return (
-                                <span
-                                  key={aId}
-                                  className="px-2 py-0.5 rounded-lg bg-indigo-600/15 text-indigo-300 border border-indigo-500/20 text-[10.5px] font-medium"
-                                >
-                                  {areaObj.nombre}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 align-top text-center">
-                          {isSubsanado ? (
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm bg-teal-500/20 text-teal-300 border-teal-500/40">
-                              <CheckCheck className="w-3.5 h-3.5 text-teal-300" />
-                              <span>SUBSANADO (Cerrado)</span>
-                            </span>
-                          ) : isConfirmed ? (
-                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm ${
-                              estado === 'CUMPLE'
-                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                                : estado === 'NO CUMPLE'
-                                ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
-                                : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                            }`}>
-                              <Check className="w-3 h-3" />
-                              <span>{estado} (Validado)</span>
-                            </span>
-                          ) : evalItem ? (
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/25 inline-flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-amber-400" />
-                              <span>Pendiente por Aprobar</span>
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900 text-slate-500 border border-slate-800 inline-flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>Pendiente</span>
-                            </span>
-                          )}
+            {/* Tabla de Numerales */}
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-900 text-slate-400 border-b border-slate-800 font-semibold">
+                      <th className="py-3 px-4 w-28">Código</th>
+                      <th className="py-3 px-4">Requisito Normativo</th>
+                      <th className="py-3 px-4 w-60">Áreas Responsables</th>
+                      <th className="py-3 px-4 w-52 text-center">Estado Auditoría</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-sans">
+                    {filteredTableNumerals.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-500 italic">
+                          No se encontraron numerales con los filtros seleccionados.
                         </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                    ) : (
+                      filteredTableNumerals.map((num) => {
+                        const evalItem = evaluationsHistory[num.codigo] || evaluationsHistory[num.id];
+                        const isSubsanado = evalItem?.estadoCompromiso === 'SUBSANADO';
+                        const isConfirmed = evalItem?.auditorConfirmado === true;
+                        const estado = evalItem ? (evalItem.estado || 'CUMPLE').toUpperCase() : 'PENDIENTE';
+
+                        return (
+                          <tr 
+                            key={num.id} 
+                            onClick={() => setSelectedDetailNumeral(num)}
+                            className="hover:bg-indigo-950/25 cursor-pointer transition-colors group select-none"
+                            title="Haga clic para ver el informe detallado de auditoría"
+                          >
+                            <td className="py-3.5 px-4 align-top font-mono font-bold text-indigo-400 group-hover:text-indigo-300 flex items-center gap-1.5">
+                              <Eye className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-indigo-400 transition-opacity" />
+                              <span>{num.codigo}</span>
+                            </td>
+                            <td className="py-3.5 px-4 align-top text-slate-200 group-hover:text-white leading-relaxed">
+                              {num.requisito}
+                            </td>
+                            <td className="py-3.5 px-4 align-top">
+                              <div className="flex flex-wrap gap-1">
+                                {(num.areaIds || []).map(aId => {
+                                  const areaObj = areas.find(a => a.id === aId);
+                                  if (!areaObj) return null;
+                                  return (
+                                    <span
+                                      key={aId}
+                                      className="px-2 py-0.5 rounded-lg bg-indigo-600/15 text-indigo-300 border border-indigo-500/20 text-[10.5px] font-medium"
+                                    >
+                                      {areaObj.nombre}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 align-top text-center">
+                              {isSubsanado ? (
+                                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm bg-teal-500/20 text-teal-300 border-teal-500/40">
+                                  <CheckCheck className="w-3.5 h-3.5 text-teal-300" />
+                                  <span>SUBSANADO (Cerrado)</span>
+                                </span>
+                              ) : isConfirmed ? (
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm ${
+                                  estado === 'CUMPLE'
+                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                                    : estado === 'NO CUMPLE'
+                                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                                    : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                                }`}>
+                                  <Check className="w-3 h-3" />
+                                  <span>{estado} (Validado)</span>
+                                </span>
+                              ) : evalItem ? (
+                                <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/25 inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-amber-400" />
+                                  <span>Pendiente por Aprobar</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900 text-slate-500 border border-slate-800 inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Pendiente</span>
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Modal Interactivo de Ficha de Auditoría al hacer clic en un numeral */}
