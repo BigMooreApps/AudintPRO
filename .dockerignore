@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+.gitignore
+ABRIR_APP.html
+.user_uploaded
+.system_generated
+*.log
