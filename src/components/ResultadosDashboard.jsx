@@ -111,9 +111,10 @@ export default function ResultadosDashboard({
       responsableAccion: '',
       confirmado: false
     };
+    const willBeConfirmed = !current.confirmado;
     const updatedReview = {
       ...current,
-      confirmado: !current.confirmado
+      confirmado: willBeConfirmed
     };
     const newReviews = {
       ...auditorReviews,
@@ -122,6 +123,14 @@ export default function ResultadosDashboard({
     setAuditorReviews(newReviews);
     if (onUpdateEvaluationsHistory) {
       onUpdateEvaluationsHistory(subnumeral, updatedReview);
+    }
+
+    // Al confirmar manualmente, reducir/colapsar el numeral automáticamente
+    if (willBeConfirmed) {
+      setExpandedMap(prev => ({
+        ...prev,
+        [subnumeral]: false
+      }));
     }
   };
 
