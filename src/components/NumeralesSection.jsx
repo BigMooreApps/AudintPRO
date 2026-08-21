@@ -347,7 +347,7 @@ export default function NumeralesSection({
             </div>
 
             {numerales.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">
+              <div className="p-8 sm:p-12 text-center text-slate-500">
                 <FileText className="w-10 h-10 mx-auto mb-3 opacity-30 text-indigo-400" />
                 <p className="text-sm font-semibold text-slate-300">No hay numerales para este filtro de Área y Grupo.</p>
                 <p className="text-xs mt-1 text-slate-400">
@@ -355,76 +355,58 @@ export default function NumeralesSection({
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto border border-slate-800/80 rounded-2xl">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-medium">
-                      <th className="py-3 px-3 w-12 text-center align-top">Auditar</th>
-                      <th className="py-3 px-4 w-32 align-top">Código / Subnumeral</th>
-                      <th className="py-3 px-4 align-top">Texto del Requisito</th>
-                      <th className="py-3 px-4 w-44 text-center align-top">Estado Auditoría</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {numerales.map((row) => {
-                      const isChecked = selectedNumeralIds.includes(row.id);
-                      const evalItem = evaluationsHistory[row.codigo] || evaluationsHistory[row.id];
-                      const isSubsanado = evalItem?.estadoCompromiso === 'SUBSANADO';
-                      const isConfirmed = evalItem?.auditorConfirmado === true;
-                      const estado = evalItem ? (evalItem.estado || 'CUMPLE').toUpperCase() : 'PENDIENTE';
+              <>
+                {/* ========================================================
+                    VISTA MÓVIL DE NUMERALES (TARJETAS TÁCTILES EDITABLES)
+                   ======================================================== */}
+                <div className="sm:hidden space-y-3">
+                  {numerales.map((row) => {
+                    const isChecked = selectedNumeralIds.includes(row.id);
+                    const evalItem = evaluationsHistory[row.codigo] || evaluationsHistory[row.id];
+                    const isSubsanado = evalItem?.estadoCompromiso === 'SUBSANADO';
+                    const isConfirmed = evalItem?.auditorConfirmado === true;
+                    const estado = evalItem ? (evalItem.estado || 'CUMPLE').toUpperCase() : 'PENDIENTE';
 
-                      return (
-                        <tr
-                          key={row.id}
-                          className={`transition-colors ${
-                            isChecked ? 'bg-indigo-950/20 hover:bg-indigo-950/30' : 'opacity-60 hover:bg-slate-800/30'
-                          }`}
-                        >
-                          {/* Checkbox */}
-                          <td className="py-3 px-3 text-center align-middle">
+                    return (
+                      <div
+                        key={row.id}
+                        className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                          isChecked 
+                            ? 'bg-indigo-950/20 border-indigo-500/40 shadow-lg' 
+                            : 'bg-slate-950/60 border-slate-800 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => handleToggleNumeralSelect(row.id)}
                               className="p-1 text-slate-400 hover:text-indigo-400 transition-colors"
                             >
                               {isChecked ? (
-                                <CheckSquare className="w-4 h-4 text-indigo-400" />
+                                <CheckSquare className="w-5 h-5 text-indigo-400" />
                               ) : (
-                                <Square className="w-4 h-4 text-slate-600" />
+                                <Square className="w-5 h-5 text-slate-600" />
                               )}
                             </button>
-                          </td>
 
-                          {/* Código */}
-                          <td className="py-3 px-4 align-top">
                             <input
                               type="text"
                               value={row.codigo}
                               onChange={(e) => handleUpdateRow(row.id, 'codigo', e.target.value)}
-                              className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500 font-mono"
+                              className="w-24 bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500 font-mono"
                               placeholder="Ej. 4.1.1"
                             />
-                          </td>
+                          </div>
 
-                          {/* Requisito */}
-                          <td className="py-3 px-4 align-top">
-                            <AutoResizeTextarea
-                              value={row.requisito}
-                              onChange={(e) => handleUpdateRow(row.id, 'requisito', e.target.value)}
-                              className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white leading-relaxed focus:outline-none focus:border-indigo-500"
-                              placeholder="Ingrese la exigencia técnica del subnumeral..."
-                            />
-                          </td>
-
-                          {/* Estado Auditoría (Idéntico al Dashboard) */}
-                          <td className="py-3 px-4 align-top text-center">
+                          <div>
                             {isSubsanado ? (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm bg-teal-500/20 text-teal-300 border-teal-500/40">
-                                <CheckCheck className="w-3.5 h-3.5 text-teal-300" />
-                                <span>SUBSANADO (Cerrado)</span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 bg-teal-500/20 text-teal-300 border-teal-500/40">
+                                <CheckCheck className="w-3 h-3" />
+                                <span>SUBSANADO</span>
                               </span>
                             ) : isConfirmed ? (
-                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm ${
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${
                                 estado === 'CUMPLE'
                                   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                                   : estado === 'NO CUMPLE'
@@ -432,26 +414,134 @@ export default function NumeralesSection({
                                   : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
                               }`}>
                                 <Check className="w-3 h-3" />
-                                <span>{estado} (Validado)</span>
+                                <span>{estado}</span>
                               </span>
                             ) : evalItem ? (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/25 inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-amber-400" />
-                                <span>Pendiente por Aprobar</span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/25 inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                <span>Por Aprobar</span>
                               </span>
                             ) : (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900 text-slate-500 border border-slate-800 inline-flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-900 text-slate-500 border border-slate-800 inline-flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 <span>Pendiente</span>
                               </span>
                             )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+                        </div>
+
+                        <AutoResizeTextarea
+                          value={row.requisito}
+                          onChange={(e) => handleUpdateRow(row.id, 'requisito', e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white leading-relaxed focus:outline-none focus:border-indigo-500"
+                          placeholder="Ingrese la exigencia técnica del subnumeral..."
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ========================================================
+                    VISTA DESKTOP DE NUMERALES (TABLA CLÁSICA)
+                   ======================================================== */}
+                <div className="hidden sm:block overflow-x-auto border border-slate-800/80 rounded-2xl">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-medium">
+                        <th className="py-3 px-3 w-12 text-center align-top">Auditar</th>
+                        <th className="py-3 px-4 w-32 align-top">Código / Subnumeral</th>
+                        <th className="py-3 px-4 align-top">Texto del Requisito</th>
+                        <th className="py-3 px-4 w-44 text-center align-top">Estado Auditoría</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {numerales.map((row) => {
+                        const isChecked = selectedNumeralIds.includes(row.id);
+                        const evalItem = evaluationsHistory[row.codigo] || evaluationsHistory[row.id];
+                        const isSubsanado = evalItem?.estadoCompromiso === 'SUBSANADO';
+                        const isConfirmed = evalItem?.auditorConfirmado === true;
+                        const estado = evalItem ? (evalItem.estado || 'CUMPLE').toUpperCase() : 'PENDIENTE';
+
+                        return (
+                          <tr
+                            key={row.id}
+                            className={`transition-colors ${
+                              isChecked ? 'bg-indigo-950/20 hover:bg-indigo-950/30' : 'opacity-60 hover:bg-slate-800/30'
+                            }`}
+                          >
+                            {/* Checkbox */}
+                            <td className="py-3 px-3 text-center align-middle">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleNumeralSelect(row.id)}
+                                className="p-1 text-slate-400 hover:text-indigo-400 transition-colors"
+                              >
+                                {isChecked ? (
+                                  <CheckSquare className="w-4 h-4 text-indigo-400" />
+                                ) : (
+                                  <Square className="w-4 h-4 text-slate-600" />
+                                )}
+                              </button>
+                            </td>
+
+                            {/* Código */}
+                            <td className="py-3 px-4 align-top">
+                              <input
+                                type="text"
+                                value={row.codigo}
+                                onChange={(e) => handleUpdateRow(row.id, 'codigo', e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500 font-mono"
+                                placeholder="Ej. 4.1.1"
+                              />
+                            </td>
+
+                            {/* Requisito */}
+                            <td className="py-3 px-4 align-top">
+                              <AutoResizeTextarea
+                                value={row.requisito}
+                                onChange={(e) => handleUpdateRow(row.id, 'requisito', e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white leading-relaxed focus:outline-none focus:border-indigo-500"
+                                placeholder="Ingrese la exigencia técnica del subnumeral..."
+                              />
+                            </td>
+
+                            {/* Estado Auditoría (Idéntico al Dashboard) */}
+                            <td className="py-3 px-4 align-top text-center">
+                              {isSubsanado ? (
+                                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm bg-teal-500/20 text-teal-300 border-teal-500/40">
+                                  <CheckCheck className="w-3.5 h-3.5 text-teal-300" />
+                                  <span>SUBSANADO (Cerrado)</span>
+                                </span>
+                              ) : isConfirmed ? (
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm ${
+                                  estado === 'CUMPLE'
+                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                                    : estado === 'NO CUMPLE'
+                                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                                    : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                                }}`}>
+                                  <Check className="w-3 h-3" />
+                                  <span>{estado} (Validado)</span>
+                                </span>
+                              ) : evalItem ? (
+                                <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/25 inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-amber-400" />
+                                  <span>Pendiente por Aprobar</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900 text-slate-500 border border-slate-800 inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Pendiente</span>
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}

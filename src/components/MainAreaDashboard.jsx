@@ -276,12 +276,12 @@ export default function MainAreaDashboard({
       {/* ========================================================
           TARJETAS KPI DINÁMICAS (5 TARJETAS CON SUBSANADOS)
          ======================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
         
-        {/* KPI 1: Avance % Confirmado */}
-        <div className="bg-slate-900/90 border border-indigo-500/20 hover:border-indigo-500/40 rounded-3xl p-4 sm:p-5 shadow-xl flex items-center justify-between transition-all group">
+        {/* KPI 1: Avance % Confirmado (Ocupa 2 cols en movil para máxima legibilidad) */}
+        <div className="col-span-2 sm:col-span-1 lg:col-span-1 bg-slate-900/90 border border-indigo-500/20 hover:border-indigo-500/40 rounded-3xl p-4 sm:p-5 shadow-xl flex items-center justify-between transition-all group">
           <div className="space-y-1">
-            <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">Avance</span>
+            <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">Avance Global</span>
             <div className="text-2xl sm:text-3xl font-black text-white font-mono flex items-baseline gap-1">
               <span>{activePct}%</span>
               <span className="text-[11px] text-slate-500 font-normal">
@@ -565,8 +565,96 @@ export default function MainAreaDashboard({
 
             </div>
 
-            {/* Tabla de Numerales */}
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            {/* ========================================================
+                VISTA MÓVIL DE NUMERALES (TARJETAS MODERNAS TÁCTILES)
+               ======================================================== */}
+            <div className="sm:hidden space-y-3">
+              {filteredTableNumerals.length === 0 ? (
+                <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-8 text-center text-slate-500 italic text-xs">
+                  No se encontraron numerales con los filtros seleccionados.
+                </div>
+              ) : (
+                filteredTableNumerals.map((num) => {
+                  const evalItem = evaluationsHistory[num.codigo] || evaluationsHistory[num.id];
+                  const isSubsanado = evalItem?.estadoCompromiso === 'SUBSANADO';
+                  const isConfirmed = evalItem?.auditorConfirmado === true;
+                  const estado = evalItem ? (evalItem.estado || 'CUMPLE').toUpperCase() : 'PENDIENTE';
+
+                  return (
+                    <div
+                      key={num.id}
+                      onClick={() => setSelectedDetailNumeral(num)}
+                      className="bg-slate-950 border border-slate-800/90 active:border-indigo-500/60 rounded-2xl p-4 space-y-3 active:scale-[0.99] transition-all shadow-lg select-none"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2.5 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-bold">
+                          {num.codigo}
+                        </span>
+
+                        {isSubsanado ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border inline-flex items-center gap-1 bg-teal-500/20 text-teal-300 border-teal-500/40">
+                            <CheckCheck className="w-3 h-3 text-teal-300" />
+                            <span>SUBSANADO</span>
+                          </span>
+                        ) : isConfirmed ? (
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border inline-flex items-center gap-1 ${
+                            estado === 'CUMPLE'
+                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                              : estado === 'NO CUMPLE'
+                              ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                              : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                          }`}>
+                            <Check className="w-3 h-3" />
+                            <span>{estado}</span>
+                          </span>
+                        ) : evalItem ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/25 inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-amber-400" />
+                            <span>Por Aprobar</span>
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-900 text-slate-500 border border-slate-800 inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>Pendiente</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-slate-200 leading-relaxed">
+                        {num.requisito}
+                      </p>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-900 text-[11px]">
+                        <div className="flex flex-wrap gap-1">
+                          {(num.areaIds || []).map(aId => {
+                            const areaObj = areas.find(a => a.id === aId);
+                            if (!areaObj) return null;
+                            return (
+                              <span
+                                key={aId}
+                                className="px-2 py-0.5 rounded-md bg-slate-900 text-indigo-300 border border-slate-800 text-[10px] font-medium"
+                              >
+                                {areaObj.nombre}
+                              </span>
+                            );
+                          })}
+                        </div>
+
+                        <span className="text-indigo-400 font-semibold flex items-center gap-1 shrink-0 ml-2">
+                          <span>Ver Ficha</span>
+                          <Eye className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* ========================================================
+                VISTA DESKTOP DE NUMERALES (TABLA CLÁSICA)
+               ======================================================== */}
+            <div className="hidden sm:block bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
@@ -634,7 +722,7 @@ export default function MainAreaDashboard({
                                     : estado === 'NO CUMPLE'
                                     ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
                                     : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                                }`}>
+                                }}`}>
                                   <Check className="w-3 h-3" />
                                   <span>{estado} (Validado)</span>
                                 </span>

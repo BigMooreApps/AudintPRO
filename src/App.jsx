@@ -587,8 +587,8 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* Main Content Area con padding inferior para barra móvil */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-28 sm:pb-8">
         
         {/* VISTA 1: DASHBOARD PRINCIPAL DE AVANCE POR ÁREAS (PANTALLA DE INICIO) */}
         {currentView === 'DASHBOARD' && (
