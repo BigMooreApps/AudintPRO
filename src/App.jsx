@@ -23,6 +23,11 @@ import {
   setActiveAuditId, 
   createDefaultAuditCycle 
 } from './engine/auditCyclesService';
+import { 
+  fetchAuditsFromSupabase, 
+  syncAuditToSupabase, 
+  deleteAuditFromSupabase 
+} from './services/supabaseClient';
 
 const STORAGE_KEY_AUTH_USER = 'AGENTE_PROMAX_AUTH_USER';
 
@@ -63,6 +68,24 @@ export default function App() {
   // Ref para evitar loops de sincronización
   const isSwitchingAuditRef = useRef(false);
 
+  // Sincronización en la nube con Supabase (Proyecto deiiaxwxlxzvsyigoexw)
+  useEffect(() => {
+    fetchAuditsFromSupabase().then(cloudAudits => {
+      if (cloudAudits && cloudAudits.length > 0) {
+        setAuditCycles(cloudAudits);
+        saveAllAuditCycles(cloudAudits);
+      } else {
+        // Si la base de datos remota está vacía, sincronizar los datos locales iniciales
+        const localAudits = loadAllAuditCycles();
+        localAudits.forEach(a => {
+          syncAuditToSupabase(a);
+        });
+      }
+    }).catch(err => {
+      console.warn('Conexión Supabase offline / fallback:', err);
+    });
+  }, []);
+
   // Manejo de inicio y cierre de sesión
   const handleLogin = (user) => {
     setCurrentUser(user);
@@ -97,16 +120,18 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  // Sincronizar hacia localStorage cuando cambie el estado de la auditoría activa
+  // Sincronizar hacia localStorage y Supabase cuando cambie el estado de la auditoría activa
   const syncActiveAuditToStorage = (updatedFields = {}) => {
     setAuditCycles(prevAudits => {
       const updatedList = prevAudits.map(audit => {
         if (audit.id === activeAuditId) {
-          return {
+          const merged = {
             ...audit,
             ...updatedFields,
             updatedAt: new Date().toISOString()
           };
+          syncAuditToSupabase(merged);
+          return merged;
         }
         return audit;
       });
@@ -197,16 +222,28 @@ export default function App() {
     const updatedAudits = [...auditCycles, newAudit];
     setAuditCycles(updatedAudits);
     saveAllAuditCycles(updatedAudits);
+    syncAuditToSupabase(newAudit);
 
     handleSelectAudit(newAudit.id);
   };
 
   const handleUpdateAudit = (auditId, updatedData) => {
+    let updatedAuditObj = null;
     setAuditCycles(prevAudits => {
-      const updatedList = prevAudits.map(a => a.id === auditId ? { ...a, ...updatedData, updatedAt: new Date().toISOString() } : a);
+      const updatedList = prevAudits.map(a => {
+        if (a.id === auditId) {
+          updatedAuditObj = { ...a, ...updatedData, updatedAt: new Date().toISOString() };
+          return updatedAuditObj;
+        }
+        return a;
+      });
       saveAllAuditCycles(updatedList);
       return updatedList;
     });
+
+    if (updatedAuditObj) {
+      syncAuditToSupabase(updatedAuditObj);
+    }
 
     // Si la auditoría editada es la activa, sincronizar estados en memoria
     if (activeAuditId === auditId) {
@@ -228,6 +265,7 @@ export default function App() {
     const remaining = auditCycles.filter(a => a.id !== auditId);
     setAuditCycles(remaining);
     saveAllAuditCycles(remaining);
+    deleteAuditFromSupabase(auditId);
 
     if (activeAuditId === auditId) {
       handleSelectAudit(remaining[0].id);
