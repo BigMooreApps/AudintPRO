@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Map, Plus, Trash2, Edit3, Check, Filter, CheckSquare, Square, Search } from 'lucide-react';
+import { compareNumeralCodes } from '../data/defaultMapeo';
 
 export default function MapeoModal({
   isOpen,
@@ -94,7 +95,7 @@ export default function MapeoModal({
       if (!matchCode && !matchReq) return false;
     }
     return true;
-  });
+  }).sort(compareNumeralCodes);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">

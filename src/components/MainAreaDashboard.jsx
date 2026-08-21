@@ -20,6 +20,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import AuditResultDetailModal from './AuditResultDetailModal';
+import { compareNumeralCodes } from '../data/defaultMapeo';
 
 export default function MainAreaDashboard({
   areas = [],
@@ -190,18 +191,21 @@ export default function MainAreaDashboard({
     return dashboardData.areaStats.find(a => a.area.id === targetId) || null;
   }, [selectedAreaId, dashboardData, isAuditor, currentUser]);
 
-  // Lista base según el área seleccionada
+  // Lista base según el área seleccionada ordenada de menor a mayor
   const baseAreaNumerals = useMemo(() => {
     const targetId = isAuditor ? currentUser.areaId : selectedAreaId;
+    let list = [];
     if (targetId === 'ALL') {
-      return mapeoNumerales;
+      list = [...mapeoNumerales];
+    } else {
+      list = mapeoNumerales.filter(n => (n.areaIds || []).includes(targetId));
     }
-    return mapeoNumerales.filter(n => (n.areaIds || []).includes(targetId));
+    return list.sort(compareNumeralCodes);
   }, [selectedAreaId, mapeoNumerales, isAuditor, currentUser]);
 
-  // Lista filtrada para la tabla inferior con búsqueda y estado
+  // Lista filtrada para la tabla inferior con búsqueda y estado ordenada de menor a mayor
   const filteredTableNumerals = useMemo(() => {
-    return baseAreaNumerals.filter(num => {
+    const list = baseAreaNumerals.filter(num => {
       const evalItem = evaluationsHistory[num.codigo] || evaluationsHistory[num.id];
       const isSubsanado = evalItem?.estadoCompromiso === 'SUBSANADO';
       const isConfirmed = evalItem?.auditorConfirmado === true;
@@ -224,6 +228,8 @@ export default function MainAreaDashboard({
 
       return true;
     });
+
+    return list.sort(compareNumeralCodes);
   }, [baseAreaNumerals, evaluationsHistory, tableFilterEstado, tableSearchTerm]);
 
   // SVG Circular Chart metrics

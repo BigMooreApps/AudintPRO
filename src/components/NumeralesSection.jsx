@@ -70,6 +70,8 @@ function AutoResizeTextarea({ value, onChange, placeholder, className }) {
   );
 }
 
+import { compareNumeralCodes } from '../data/defaultMapeo';
+
 export default function NumeralesSection({
   numerales,
   setNumerales,
@@ -102,6 +104,7 @@ export default function NumeralesSection({
         ? mapeoNumerales.map(n => ({ ...n }))
         : mapeoNumerales.filter(n => (n.areaIds || []).includes(targetArea)).map(n => ({ ...n }));
       
+      filtered.sort(compareNumeralCodes);
       setNumerales(filtered);
       setSelectedNumeralIds(filtered.map(n => n.id));
       setAuditMode('ALL');
@@ -115,14 +118,17 @@ export default function NumeralesSection({
     return match ? match[1] : 'OTHER';
   };
 
-  // Obtener los numerales base según el área seleccionada
+  // Obtener los numerales base según el área seleccionada ordenados de menor a mayor
   const baseNumeralsByArea = useMemo(() => {
+    let list = [];
     if (selectedAreaId === 'ALL') {
-      return mapeoNumerales.map(n => ({ ...n }));
+      list = mapeoNumerales.map(n => ({ ...n }));
+    } else {
+      list = mapeoNumerales
+        .filter(n => (n.areaIds || []).includes(selectedAreaId))
+        .map(n => ({ ...n }));
     }
-    return mapeoNumerales
-      .filter(n => (n.areaIds || []).includes(selectedAreaId))
-      .map(n => ({ ...n }));
+    return list.sort(compareNumeralCodes);
   }, [selectedAreaId, mapeoNumerales]);
 
   // Grupos disponibles presentes en los numerales del área seleccionada
@@ -135,10 +141,10 @@ export default function NumeralesSection({
     return Array.from(groupKeys).map(key => ({
       key,
       label: TITULOS_GRUPOS[key] || `Numerales ${key}`
-    })).sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+    })).sort((a, b) => compareNumeralCodes(a.key, b.key));
   }, [baseNumeralsByArea]);
 
-  // Actualizar lista cuando cambia el Área o el Grupo
+  // Actualizar lista cuando cambia el Área o el Grupo (siempre ordenados de menor a mayor)
   const applyFilters = (areaId, groupId) => {
     let filtered = areaId === 'ALL'
       ? mapeoNumerales.map(n => ({ ...n }))
@@ -148,6 +154,7 @@ export default function NumeralesSection({
       filtered = filtered.filter(n => getGroupKey(n.codigo) === groupId);
     }
 
+    filtered.sort(compareNumeralCodes);
     setNumerales(filtered);
     setSelectedNumeralIds(filtered.map(n => n.id));
     setAuditMode('ALL');

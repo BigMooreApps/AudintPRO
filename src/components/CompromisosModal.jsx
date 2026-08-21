@@ -22,6 +22,7 @@ import {
   Building2,
   Tag
 } from 'lucide-react';
+import { compareNumeralCodes } from '../data/defaultMapeo';
 
 export default function CompromisosModal({ 
   isOpen, 
@@ -111,7 +112,7 @@ export default function CompromisosModal({
       }
     });
 
-    return list;
+    return list.sort((a, b) => compareNumeralCodes(a.codigo, b.codigo));
   }, [evaluationsHistory, mapeoNumerales, todayStr, isAuditor, currentUser]);
 
   // Contadores de resumen

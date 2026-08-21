@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   PieChart, 
   Bot, 
@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   Clock
 } from 'lucide-react';
+import { compareNumeralCodes } from '../data/defaultMapeo';
 
 export default function ResultadosDashboard({ 
   auditResult, 
@@ -33,6 +34,12 @@ export default function ResultadosDashboard({
   // Estado de confirmación manual del auditor por subnumeral
   const [auditorReviews, setAuditorReviews] = useState({});
 
+  const rawSubnumerales = auditResult?.subnumeralesResultados || [];
+
+  const subnumeralesResultados = useMemo(() => {
+    return [...rawSubnumerales].sort((a, b) => compareNumeralCodes(a.subnumeral, b.subnumeral));
+  }, [rawSubnumerales]);
+
   if (!auditResult) {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-500 shadow-xl">
@@ -44,8 +51,6 @@ export default function ResultadosDashboard({
       </div>
     );
   }
-
-  const { subnumeralesResultados = [] } = auditResult;
 
   // Extraer estado recomendado por la IA
   const getAiRecommendedState = (dynamicFields = []) => {

@@ -838,3 +838,57 @@ export const DEFAULT_NUMERALES_MAPEO = [
     areaIds: ['area-direccion-calidad']
   }
 ];
+
+/**
+ * Comparador numérico jerárquico para códigos de numerales ISO (ej: 4.1.1 < 4.1.2 < 4.2.1 < 5.3 < 7.8.6.1)
+ */
+export function compareNumeralCodes(a, b) {
+  const codeA = (typeof a === 'string' ? a : (a?.codigo || a?.subnumeral || '')).trim();
+  const codeB = (typeof b === 'string' ? b : (b?.codigo || b?.subnumeral || '')).trim();
+
+  if (!codeA && !codeB) return 0;
+  if (!codeA) return 1;
+  if (!codeB) return -1;
+
+  // Segmentar por puntos, espacios o guiones
+  const partsA = codeA.split(/[.\s-]+/);
+  const partsB = codeB.split(/[.\s-]+/);
+  
+  const maxLength = Math.max(partsA.length, partsB.length);
+  for (let i = 0; i < maxLength; i++) {
+    const partA = partsA[i] || '';
+    const partB = partsB[i] || '';
+
+    const numA = parseInt(partA, 10);
+    const numB = parseInt(partB, 10);
+
+    if (!isNaN(numA) && !isNaN(numB)) {
+      if (numA !== numB) {
+        return numA - numB;
+      }
+      // Si el número base es igual, comparar sufijos alfabéticos (ej "4.1a" vs "4.1b")
+      const alphaA = partA.replace(/^\d+/, '');
+      const alphaB = partB.replace(/^\d+/, '');
+      if (alphaA !== alphaB) {
+        return alphaA.localeCompare(alphaB);
+      }
+    } else if (!isNaN(numA)) {
+      return -1;
+    } else if (!isNaN(numB)) {
+      return 1;
+    } else {
+      const cmp = partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
+      if (cmp !== 0) return cmp;
+    }
+  }
+
+  return codeA.localeCompare(codeB, undefined, { numeric: true });
+}
+
+/**
+ * Ordena un array de numerales de menor a mayor jerárquicamente
+ */
+export function sortNumerals(list = []) {
+  if (!Array.isArray(list)) return [];
+  return [...list].sort(compareNumeralCodes);
+}

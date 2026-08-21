@@ -32,7 +32,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { AUDIT_TYPES, createDefaultAuditCycle } from '../engine/auditCyclesService';
-import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO } from '../data/defaultMapeo';
+import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO, compareNumeralCodes } from '../data/defaultMapeo';
 
 export default function AuditoriasModal({
   isOpen,
@@ -93,9 +93,9 @@ export default function AuditoriasModal({
     });
   }, [auditCycles, searchTerm]);
 
-  // Numerales filtrados para el paso 3 (igual que en MapeoModal)
+  // Numerales filtrados para el paso 3 (ordenados de menor a mayor)
   const filteredWizardMapeo = useMemo(() => {
-    return (wizardMapeo || []).filter(n => {
+    const list = (wizardMapeo || []).filter(n => {
       if (mapeoFilterAreaId !== 'ALL' && !(n.areaIds || []).includes(mapeoFilterAreaId)) {
         return false;
       }
@@ -107,6 +107,8 @@ export default function AuditoriasModal({
       }
       return true;
     });
+
+    return list.sort(compareNumeralCodes);
   }, [wizardMapeo, mapeoFilterAreaId, mapeoSearchTerm]);
 
   if (!isOpen) return null;
