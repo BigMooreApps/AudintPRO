@@ -8,41 +8,49 @@ export const DEFAULT_AREAS = [
   {
     id: 'area-direccion-calidad',
     nombre: 'Alta Dirección y Gestión de Calidad',
+    password: '1',
     color: 'indigo'
   },
   {
     id: 'area-talento-humano',
     nombre: 'Personal y Competencia Técnica',
+    password: '1',
     color: 'blue'
   },
   {
     id: 'area-metrologia-equipos',
     nombre: 'Metrología, Equipos e Instalaciones',
+    password: '1',
     color: 'emerald'
   },
   {
     id: 'area-compras-proveedores',
     nombre: 'Compras y Proveedores Externos',
+    password: '1',
     color: 'cyan'
   },
   {
     id: 'area-servicio-cliente',
     nombre: 'Servicio al Cliente, Contratos y Muestreo',
+    password: '1',
     color: 'amber'
   },
   {
     id: 'area-ensayos-calibracion',
     nombre: 'Operaciones Técnicas (Métodos y Ensayos/Calibración)',
+    password: '1',
     color: 'teal'
   },
   {
     id: 'area-aseguramiento-validez',
     nombre: 'Aseguramiento de la Validez e Incertidumbre',
+    password: '1',
     color: 'purple'
   },
   {
     id: 'area-emision-informes',
     nombre: 'Informes de Resultados y Control de Datos (LIMS)',
+    password: '1',
     color: 'rose'
   }
 ];

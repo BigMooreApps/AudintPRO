@@ -28,7 +28,8 @@ import {
   Settings,
   Filter,
   CheckSquare,
-  Square
+  Square,
+  KeyRound
 } from 'lucide-react';
 import { AUDIT_TYPES, createDefaultAuditCycle } from '../engine/auditCyclesService';
 import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO } from '../data/defaultMapeo';
@@ -65,8 +66,10 @@ export default function AuditoriasModal({
   // Áreas personalizadas para la auditoría (Paso 2)
   const [wizardAreas, setWizardAreas] = useState(DEFAULT_AREAS);
   const [newAreaName, setNewAreaName] = useState('');
+  const [newAreaPassword, setNewAreaPassword] = useState('1');
   const [editingAreaId, setEditingAreaId] = useState(null);
   const [editingAreaName, setEditingAreaName] = useState('');
+  const [editingAreaPassword, setEditingAreaPassword] = useState('1');
 
   // Mapeo personalizado para la auditoría (Paso 3)
   const [wizardMapeo, setWizardMapeo] = useState(DEFAULT_NUMERALES_MAPEO);
@@ -125,11 +128,13 @@ export default function AuditoriasModal({
       observacionesGenerales: '',
       cloneFromCurrent: true
     });
-    setWizardAreas(DEFAULT_AREAS.map(a => ({ ...a })));
+    setWizardAreas(DEFAULT_AREAS.map(a => ({ password: '1', ...a })));
     setWizardMapeo(DEFAULT_NUMERALES_MAPEO.map(n => ({ ...n, areaIds: [...(n.areaIds || [])] })));
     setMapeoFilterAreaId('ALL');
     setMapeoSearchTerm('');
     setEditingMapeoNumeralId(null);
+    setNewAreaName('');
+    setNewAreaPassword('1');
     setIsFormOpen(true);
   };
 
@@ -148,11 +153,13 @@ export default function AuditoriasModal({
       observacionesGenerales: audit.observacionesGenerales || '',
       cloneFromCurrent: false
     });
-    setWizardAreas((audit.areas || DEFAULT_AREAS).map(a => ({ ...a })));
+    setWizardAreas((audit.areas || DEFAULT_AREAS).map(a => ({ password: '1', ...a })));
     setWizardMapeo((audit.mapeoNumerales || DEFAULT_NUMERALES_MAPEO).map(n => ({ ...n, areaIds: [...(n.areaIds || [])] })));
     setMapeoFilterAreaId('ALL');
     setMapeoSearchTerm('');
     setEditingMapeoNumeralId(null);
+    setNewAreaName('');
+    setNewAreaPassword('1');
     setIsFormOpen(true);
   };
 
@@ -161,6 +168,8 @@ export default function AuditoriasModal({
     setEditingAuditId(null);
     setCreationStep(1);
     setEditingMapeoNumeralId(null);
+    setNewAreaName('');
+    setNewAreaPassword('1');
   };
 
   // Gestión de Áreas en Paso 2
@@ -171,10 +180,12 @@ export default function AuditoriasModal({
     const newArea = {
       id: newId,
       nombre: newAreaName.trim(),
+      password: newAreaPassword.trim() || '1',
       color: 'indigo'
     };
     setWizardAreas([...wizardAreas, newArea]);
     setNewAreaName('');
+    setNewAreaPassword('1');
   };
 
   const handleDeleteArea = (areaId) => {
@@ -189,9 +200,14 @@ export default function AuditoriasModal({
 
   const handleSaveEditArea = (areaId) => {
     if (!editingAreaName.trim()) return;
-    setWizardAreas(wizardAreas.map(a => a.id === areaId ? { ...a, nombre: editingAreaName.trim() } : a));
+    setWizardAreas(wizardAreas.map(a => a.id === areaId ? { 
+      ...a, 
+      nombre: editingAreaName.trim(),
+      password: editingAreaPassword.trim() || '1'
+    } : a));
     setEditingAreaId(null);
     setEditingAreaName('');
+    setEditingAreaPassword('1');
   };
 
   // Gestión de Numerales en Paso 3 (exactamente como MapeoModal)
@@ -521,6 +537,19 @@ export default function AuditoriasModal({
                       className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 min-w-[200px]"
                     />
 
+                    {/* Input de Contraseña de Acceso */}
+                    <div className="relative flex items-center shrink-0">
+                      <KeyRound className="w-3.5 h-3.5 text-slate-500 absolute left-3 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Clave (def: 1)"
+                        value={newAreaPassword}
+                        onChange={(e) => setNewAreaPassword(e.target.value)}
+                        className="w-36 bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs text-indigo-300 font-mono focus:outline-none focus:border-indigo-500"
+                        title="Contraseña para el inicio de sesión de este auditor (Por defecto: 1)"
+                      />
+                    </div>
+
                     <button
                       type="submit"
                       className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition-all transform active:scale-95 shrink-0"
@@ -538,22 +567,39 @@ export default function AuditoriasModal({
                       return (
                         <div
                           key={area.id}
-                          className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-3"
+                          className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-3"
                         >
-                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                            <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shrink-0" />
-                            {isEditing ? (
+                          {isEditing ? (
+                            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
                               <input
                                 type="text"
                                 value={editingAreaName}
                                 onChange={(e) => setEditingAreaName(e.target.value)}
-                                className="bg-slate-950 border border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-white flex-1"
+                                className="bg-slate-950 border border-indigo-500 rounded-lg px-2.5 py-1 text-xs text-white flex-1 min-w-[160px]"
                                 autoFocus
                               />
-                            ) : (
+                              <div className="relative flex items-center shrink-0">
+                                <KeyRound className="w-3 h-3 text-slate-500 absolute left-2.5 pointer-events-none" />
+                                <input
+                                  type="text"
+                                  placeholder="Clave"
+                                  value={editingAreaPassword}
+                                  onChange={(e) => setEditingAreaPassword(e.target.value)}
+                                  className="w-24 bg-slate-950 border border-indigo-500 rounded-lg pl-7 pr-2 py-1 text-xs text-indigo-300 font-mono"
+                                  title="Contraseña del auditor"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                              <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shrink-0" />
                               <span className="text-xs font-semibold text-slate-200 truncate">{area.nombre}</span>
-                            )}
-                          </div>
+                              <span className="px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-[10.5px] font-mono text-indigo-300 flex items-center gap-1 shrink-0">
+                                <KeyRound className="w-3 h-3 text-slate-500" />
+                                <span>Clave: <strong className="text-white">{area.password || '1'}</strong></span>
+                              </span>
+                            </div>
+                          )}
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {isEditing ? (
@@ -570,9 +616,10 @@ export default function AuditoriasModal({
                                 onClick={() => {
                                   setEditingAreaId(area.id);
                                   setEditingAreaName(area.nombre);
+                                  setEditingAreaPassword(area.password || '1');
                                 }}
                                 className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg"
-                                title="Editar nombre"
+                                title="Editar nombre y contraseña"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>

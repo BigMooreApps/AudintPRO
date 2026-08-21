@@ -4,6 +4,7 @@ import {
   Crown, 
   Users, 
   ArrowRight, 
+  ArrowLeft,
   KeyRound, 
   Sparkles, 
   Lock,
@@ -24,6 +25,10 @@ export default function LoginScreen({
   const [passwordError, setPasswordError] = useState('');
   const [areaSearch, setAreaSearch] = useState('');
 
+  // Estado para login de auditor con contraseña
+  const [selectedAuditorArea, setSelectedAuditorArea] = useState(null);
+  const [auditorPassword, setAuditorPassword] = useState('');
+
   const handleSuperAuditorSubmit = (e) => {
     e?.preventDefault();
     if (adminPassword.trim() === 'admin17025' || adminPassword.trim() === 'admin' || adminPassword.trim() === '') {
@@ -39,15 +44,25 @@ export default function LoginScreen({
     }
   };
 
-  const handleAuditorAreaSubmit = (area) => {
-    onLogin({
-      id: `user-auditor-${area.id}`,
-      role: 'AUDITOR',
-      nombre: `Auditor: ${area.nombre}`,
-      cargo: `Equipo Auditor — ${area.nombre}`,
-      areaId: area.id,
-      areaNombre: area.nombre
-    });
+  const handleAuditorLoginSubmit = (e) => {
+    e?.preventDefault();
+    if (!selectedAuditorArea) return;
+
+    const expectedPassword = (selectedAuditorArea.password || '1').trim();
+    const enteredPassword = auditorPassword.trim();
+
+    if (enteredPassword === expectedPassword || (expectedPassword === '1' && enteredPassword === '')) {
+      onLogin({
+        id: `user-auditor-${selectedAuditorArea.id}`,
+        role: 'AUDITOR',
+        nombre: `Auditor: ${selectedAuditorArea.nombre}`,
+        cargo: `Equipo Auditor — ${selectedAuditorArea.nombre}`,
+        areaId: selectedAuditorArea.id,
+        areaNombre: selectedAuditorArea.nombre
+      });
+    } else {
+      setPasswordError('Contraseña incorrecta para esta área. (Clave predefinida: 1)');
+    }
   };
 
   const filteredAreas = areas.filter(a => 
@@ -104,6 +119,7 @@ export default function LoginScreen({
               onClick={() => {
                 setSelectedRole('SUPER_AUDITOR');
                 setPasswordError('');
+                setSelectedAuditorArea(null);
               }}
               className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 ${
                 selectedRole === 'SUPER_AUDITOR'
@@ -150,19 +166,22 @@ export default function LoginScreen({
                   </div>
                   <input
                     type="password"
-                    placeholder="••••••••••••"
                     value={adminPassword}
                     onChange={(e) => {
                       setAdminPassword(e.target.value);
                       setPasswordError('');
                     }}
-                    className="w-full bg-[#070A12] border border-white/[0.08] group-hover:border-white/[0.15] focus:border-indigo-500 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono transition-all"
+                    placeholder="admin17025"
+                    className="w-full bg-[#070A12] border border-white/[0.08] focus:border-indigo-500 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-mono"
                     autoFocus
                   />
                 </div>
 
                 {passwordError && (
-                  <p className="text-xs text-rose-400 font-medium animate-in fade-in">{passwordError}</p>
+                  <p className="text-xs text-rose-400 flex items-center gap-1.5 animate-in fade-in pt-1 font-medium">
+                    <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                    <span>{passwordError}</span>
+                  </p>
                 )}
               </div>
 
@@ -181,45 +200,125 @@ export default function LoginScreen({
           {selectedRole === 'AUDITOR' && (
             <div className="space-y-4 animate-in fade-in duration-200">
               
-              {/* Quick Area Search */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Buscar área o departamento..."
-                  value={areaSearch}
-                  onChange={(e) => setAreaSearch(e.target.value)}
-                  className="w-full bg-[#070A12] border border-white/[0.08] focus:border-indigo-500 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/20"
-                />
-              </div>
-
-              {/* Area Selection Grid */}
-              <div className="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar pr-1">
-                {filteredAreas.map((area) => (
-                  <button
-                    key={area.id}
-                    onClick={() => handleAuditorAreaSubmit(area)}
-                    className="w-full p-3 bg-[#070A12]/90 hover:bg-indigo-600/[0.08] border border-white/[0.06] hover:border-indigo-500/40 rounded-2xl text-left flex items-center justify-between gap-3 group transition-all duration-150"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-2 h-2 rounded-full bg-indigo-400 group-hover:scale-125 group-hover:bg-emerald-400 transition-all shrink-0" />
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-white truncate">
-                        {area.nombre}
-                      </span>
-                    </div>
-
-                    <div className="p-1 rounded-lg bg-white/[0.03] group-hover:bg-indigo-500 group-hover:text-white text-slate-500 transition-all shrink-0">
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </div>
-                  </button>
-                ))}
-
-                {filteredAreas.length === 0 && (
-                  <div className="p-6 text-center text-xs text-slate-500 italic">
-                    No se encontraron áreas con ese criterio de búsqueda.
+              {!selectedAuditorArea ? (
+                // Vista 1: Selector de Área
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Buscar área o departamento..."
+                      value={areaSearch}
+                      onChange={(e) => setAreaSearch(e.target.value)}
+                      className="w-full bg-[#070A12] border border-white/[0.08] focus:border-indigo-500 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/20"
+                    />
                   </div>
-                )}
-              </div>
+
+                  <div className="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar pr-1">
+                    {filteredAreas.map((area) => (
+                      <button
+                        key={area.id}
+                        onClick={() => {
+                          setSelectedAuditorArea(area);
+                          setAuditorPassword('');
+                          setPasswordError('');
+                        }}
+                        className="w-full p-3 bg-[#070A12]/90 hover:bg-indigo-600/[0.08] border border-white/[0.06] hover:border-indigo-500/40 rounded-2xl text-left flex items-center justify-between gap-3 group transition-all duration-150"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-2 h-2 rounded-full bg-indigo-400 group-hover:scale-125 group-hover:bg-emerald-400 transition-all shrink-0" />
+                          <span className="text-xs font-bold text-slate-200 group-hover:text-white truncate">
+                            {area.nombre}
+                          </span>
+                        </div>
+
+                        <div className="p-1 rounded-lg bg-white/[0.03] group-hover:bg-indigo-500 group-hover:text-white text-slate-500 transition-all shrink-0">
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </div>
+                      </button>
+                    ))}
+
+                    {filteredAreas.length === 0 && (
+                      <div className="p-6 text-center text-xs text-slate-500 italic">
+                        No se encontraron áreas con ese criterio de búsqueda.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                // Vista 2: Formulario de Contraseña para el Área Seleccionada
+                <form onSubmit={handleAuditorLoginSubmit} className="space-y-4 animate-in fade-in duration-200">
+                  
+                  {/* Header del Área */}
+                  <div className="p-3 bg-indigo-950/30 border border-indigo-500/30 rounded-2xl flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 shrink-0">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[10.5px] text-slate-400 uppercase tracking-wider block font-semibold">Área Seleccionada:</span>
+                        <h4 className="text-xs font-bold text-white truncate">{selectedAuditorArea.nombre}</h4>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAuditorArea(null);
+                        setPasswordError('');
+                      }}
+                      className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 hover:underline shrink-0 flex items-center gap-1"
+                    >
+                      <ArrowLeft className="w-3 h-3" />
+                      <span>Cambiar</span>
+                    </button>
+                  </div>
+
+                  {/* Password Input */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-300">
+                        Contraseña / PIN de Acceso
+                      </label>
+                      <span className="text-[10.5px] text-slate-500 font-mono">Predefinida: 1</span>
+                    </div>
+
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                        <KeyRound className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="password"
+                        value={auditorPassword}
+                        onChange={(e) => {
+                          setAuditorPassword(e.target.value);
+                          setPasswordError('');
+                        }}
+                        placeholder="Ingrese la contraseña (ej. 1)"
+                        className="w-full bg-[#070A12] border border-white/[0.08] focus:border-indigo-500 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-mono"
+                        autoFocus
+                      />
+                    </div>
+
+                    {passwordError && (
+                      <p className="text-xs text-rose-400 flex items-center gap-1.5 animate-in fade-in pt-1 font-medium">
+                        <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                        <span>{passwordError}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Botón de Ingreso */}
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 hover:from-indigo-400 hover:to-indigo-600 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
+                  >
+                    <span>Ingresar como Auditor</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </form>
+              )}
+
             </div>
           )}
 
