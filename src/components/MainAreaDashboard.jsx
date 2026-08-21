@@ -40,10 +40,10 @@ export default function MainAreaDashboard({
     }
   }, [currentUser, isAuditor]);
 
-  // Estado para colapsar/expandir la sección de áreas
-  const [isAreaSectionExpanded, setIsAreaSectionExpanded] = useState(true);
-  // Estado para colapsar/expandir la sección de tabla de numerales
-  const [isTableSectionExpanded, setIsTableSectionExpanded] = useState(true);
+  // Estado para colapsar/expandir la sección de áreas (reducido por defecto)
+  const [isAreaSectionExpanded, setIsAreaSectionExpanded] = useState(false);
+  // Estado para colapsar/expandir la sección de tabla de numerales (reducido por defecto)
+  const [isTableSectionExpanded, setIsTableSectionExpanded] = useState(false);
 
   // Filtros interactivos para la tabla de numerales del Dashboard
   const [tableSearchTerm, setTableSearchTerm] = useState('');
