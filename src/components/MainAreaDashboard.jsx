@@ -261,57 +261,6 @@ export default function MainAreaDashboard({
       </div>
 
       {/* ========================================================
-          ALERTA VISUAL DE TAREAS Y FECHAS DE REVISIÓN
-         ======================================================== */}
-      {compromisosAlertStats.total > 0 && (
-        <div className={`p-4 sm:p-5 rounded-3xl border shadow-xl flex flex-wrap items-center justify-between gap-4 animate-fadeIn ${
-          compromisosAlertStats.vencidos > 0
-            ? 'bg-rose-950/40 border-rose-500/40 shadow-rose-950/20'
-            : 'bg-amber-950/40 border-amber-500/40 shadow-amber-950/20'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-2xl shrink-0 ${
-              compromisosAlertStats.vencidos > 0
-                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse'
-                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-            }`}>
-              <ShieldAlert className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white flex flex-wrap items-center gap-2">
-                <span>Alerta de Tareas y Planes de Acción</span>
-                {compromisosAlertStats.vencidos > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-600 text-white animate-pulse">
-                    {compromisosAlertStats.vencidos} Vencidos
-                  </span>
-                )}
-                {compromisosAlertStats.proximos > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-500/30 text-amber-300 border border-amber-500/40">
-                    {compromisosAlertStats.proximos} Próximos a Vencer
-                  </span>
-                )}
-              </h4>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Existen {compromisosAlertStats.total} tareas pendientes de subsanación con fechas de revisión programadas.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={onOpenCompromisosModal}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all ${
-              compromisosAlertStats.vencidos > 0
-                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
-                : 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30'
-            }`}
-          >
-            <span>Ver Tareas y Seguimiento</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* ========================================================
           TARJETAS KPI DINÁMICAS (5 TARJETAS CON SUBSANADOS)
          ======================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
