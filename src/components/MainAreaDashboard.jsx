@@ -15,7 +15,9 @@ import {
   ShieldCheck,
   Search,
   Filter,
-  UserCheck
+  UserCheck,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import AuditResultDetailModal from './AuditResultDetailModal';
 
@@ -37,6 +39,9 @@ export default function MainAreaDashboard({
       setSelectedAreaId(currentUser.areaId);
     }
   }, [currentUser, isAuditor]);
+
+  // Estado para colapsar/expandir la sección de áreas
+  const [isAreaSectionExpanded, setIsAreaSectionExpanded] = useState(true);
 
   // Filtros interactivos para la tabla de numerales del Dashboard
   const [tableSearchTerm, setTableSearchTerm] = useState('');
@@ -388,16 +393,22 @@ export default function MainAreaDashboard({
       </div>
 
       {/* ========================================================
-          TARJETAS DE AVANCE POR ÁREA (GRID DINÁMICO)
+          TARJETAS DE AVANCE POR ÁREA (GRID DINÁMICO COLAPSABLE)
          ======================================================== */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className={`bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl transition-all ${
+        isAreaSectionExpanded ? 'p-6 sm:p-7 space-y-6' : 'p-4 sm:p-5'
+      }`}>
+        <div 
+          onClick={() => setIsAreaSectionExpanded(!isAreaSectionExpanded)}
+          className="flex flex-wrap items-center justify-between gap-4 cursor-pointer select-none group"
+          title="Haga clic para expandir o reducir esta sección"
+        >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:bg-indigo-500/20 group-hover:text-indigo-300 transition-all">
               <Layers className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">
+              <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">
                 {isAuditor ? `Área de Auditoría Asignada: ${currentUser.areaNombre}` : 'Estado y Avance por Cada Área de Auditoría'}
               </h3>
               <p className="text-xs text-slate-400">
@@ -405,64 +416,72 @@ export default function MainAreaDashboard({
               </p>
             </div>
           </div>
-          <span className="text-xs font-mono font-semibold text-slate-400">
-            {visibleAreaStats.length} {visibleAreaStats.length === 1 ? 'Área Asignada' : 'Áreas Configuradas'}
-          </span>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono font-semibold text-slate-400">
+              {visibleAreaStats.length} {visibleAreaStats.length === 1 ? 'Área Asignada' : 'Áreas Configuradas'}
+            </span>
+            <div className="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 group-hover:text-white group-hover:border-slate-700 transition-all">
+              {isAreaSectionExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {visibleAreaStats.map((item) => {
-            const isSelected = !isAuditor && selectedAreaId === item.area.id;
+        {isAreaSectionExpanded && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-2 border-t border-slate-800 animate-fadeIn">
+            {visibleAreaStats.map((item) => {
+              const isSelected = !isAuditor && selectedAreaId === item.area.id;
 
-            return (
-              <div
-                key={item.area.id}
-                onClick={() => !isAuditor && setSelectedAreaId(item.area.id)}
-                className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
-                  isSelected
-                    ? 'bg-indigo-950/40 border-indigo-500 shadow-lg shadow-indigo-500/10'
-                    : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/60 cursor-pointer'
-                }`}
-              >
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
-                      <Users className="w-3.5 h-3.5" />
+              return (
+                <div
+                  key={item.area.id}
+                  onClick={() => !isAuditor && setSelectedAreaId(item.area.id)}
+                  className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
+                    isSelected
+                      ? 'bg-indigo-950/40 border-indigo-500 shadow-lg shadow-indigo-500/10'
+                      : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/60 cursor-pointer'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                        <Users className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-[11px] font-mono font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                        {item.pctAvance}%
+                      </span>
                     </div>
-                    <span className="text-[11px] font-mono font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
-                      {item.pctAvance}%
-                    </span>
+
+                    <h4 className="text-xs font-bold text-white leading-snug line-clamp-2">
+                      {item.area.nombre}
+                    </h4>
                   </div>
 
-                  <h4 className="text-xs font-bold text-white leading-snug line-clamp-2">
-                    {item.area.nombre}
-                  </h4>
-                </div>
+                  <div className="space-y-2">
+                    {/* Progress bar */}
+                    <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden flex">
+                      <div 
+                        style={{ width: `${item.pctAvance}%` }} 
+                        className="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-500" 
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  {/* Progress bar */}
-                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden flex">
-                    <div 
-                      style={{ width: `${item.pctAvance}%` }} 
-                      className="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-500" 
-                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStartAuditForArea(item.area.id);
+                      }}
+                      className="w-full py-1.5 px-3 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <span>Auditar Área</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
                   </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onStartAuditForArea(item.area.id);
-                    }}
-                    className="w-full py-1.5 px-3 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <span>Auditar Área</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ========================================================
