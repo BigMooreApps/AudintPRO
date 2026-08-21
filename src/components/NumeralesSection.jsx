@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Trash2, 
   FileText, 
   Check, 
   CheckCheck, 
@@ -91,9 +90,6 @@ export default function NumeralesSection({
 
   // Estado para expandir/reducir la sección completa de numerales (idéntico al Dashboard)
   const [isTableSectionExpanded, setIsTableSectionExpanded] = useState(false);
-
-  // Estado para expandir/reducir filas individuales
-  const [expandedRows, setExpandedRows] = useState({});
 
   // Sincronizar automáticamente si cambia el área seleccionada desde el Dashboard de Inicio
   useEffect(() => {
@@ -188,28 +184,6 @@ export default function NumeralesSection({
     } else {
       setSelectedNumeralIds(numerales.map(n => n.id));
       setAuditMode('ALL');
-    }
-  };
-
-  // Manejo de expandir / reducir individual y global
-  const isRowExpanded = (id) => !!expandedRows[id];
-
-  const handleToggleRowExpand = (id) => {
-    setExpandedRows(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
-
-  const areAllExpanded = numerales.length > 0 && numerales.every(n => !!expandedRows[n.id]);
-
-  const handleToggleExpandAll = () => {
-    if (areAllExpanded) {
-      setExpandedRows({});
-    } else {
-      const allExp = {};
-      numerales.forEach(n => { allExp[n.id] = true; });
-      setExpandedRows(allExp);
     }
   };
 
@@ -322,7 +296,7 @@ export default function NumeralesSection({
                 Numerales Asignados: {areas.find(a => a.id === selectedAreaId)?.nombre || 'Todas las Áreas'}
               </h3>
               <p className="text-xs text-slate-400">
-                Seleccione o configure los subnumerales que formarán parte de esta sesión de auditoría
+                Haga clic en cualquier numeral para ver su informe técnico de IA, plan de acción y dictamen del auditor
               </p>
             </div>
           </div>
@@ -345,7 +319,7 @@ export default function NumeralesSection({
         {isTableSectionExpanded && (
           <div className="space-y-4 pt-2 border-t border-slate-800/80 animate-fadeIn">
             <div className="px-1 py-2 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={handleToggleSelectAll}
                   className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
@@ -359,27 +333,6 @@ export default function NumeralesSection({
                   <span>{selectedNumeralIds.length === numerales.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}</span>
                 </button>
                 
-                <span className="text-slate-600 hidden sm:inline">•</span>
-
-                {/* Botón Global para Expandir / Reducir Filas de Requisitos */}
-                <button
-                  onClick={handleToggleExpandAll}
-                  className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white bg-slate-950 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700/80 font-medium transition-all shadow-sm"
-                  title={areAllExpanded ? 'Reducir filas de requisitos' : 'Expandir filas de requisitos'}
-                >
-                  {areAllExpanded ? (
-                    <>
-                      <ChevronUp className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Reducir Filas</span>
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Expandir Filas</span>
-                    </>
-                  )}
-                </button>
-
                 <span className="text-xs text-slate-400">
                   ({selectedNumeralIds.length} de {numerales.length} seleccionados para auditar)
                 </span>
@@ -399,17 +352,15 @@ export default function NumeralesSection({
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-medium">
-                      <th className="py-3 px-2 w-10 text-center align-middle"></th>
-                      <th className="py-3 px-3 w-12 text-center align-middle">Auditar</th>
-                      <th className="py-3 px-4 w-32 align-middle">Código / Subnumeral</th>
-                      <th className="py-3 px-4 align-middle">Texto del Requisito</th>
-                      <th className="py-3 px-4 w-44 text-center align-middle">Estado Auditoría</th>
+                      <th className="py-3 px-3 w-12 text-center align-top">Auditar</th>
+                      <th className="py-3 px-4 w-32 align-top">Código / Subnumeral</th>
+                      <th className="py-3 px-4 align-top">Texto del Requisito</th>
+                      <th className="py-3 px-4 w-44 text-center align-top">Estado Auditoría</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {numerales.map((row) => {
                       const isChecked = selectedNumeralIds.includes(row.id);
-                      const isExpanded = isRowExpanded(row.id);
                       const evalItem = evaluationsHistory[row.codigo] || evaluationsHistory[row.id];
                       const isSubsanado = evalItem?.estadoCompromiso === 'SUBSANADO';
                       const isConfirmed = evalItem?.auditorConfirmado === true;
@@ -422,22 +373,6 @@ export default function NumeralesSection({
                             isChecked ? 'bg-indigo-950/20 hover:bg-indigo-950/30' : 'opacity-60 hover:bg-slate-800/30'
                           }`}
                         >
-                          {/* Botón de expandir / reducir individual */}
-                          <td className="py-3 px-2 text-center align-middle">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleRowExpand(row.id)}
-                              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                              title={isExpanded ? 'Reducir numeral' : 'Expandir numeral para editar'}
-                            >
-                              {isExpanded ? (
-                                <ChevronUp className="w-4 h-4 text-indigo-400" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" />
-                              )}
-                            </button>
-                          </td>
-
                           {/* Checkbox */}
                           <td className="py-3 px-3 text-center align-middle">
                             <button
@@ -454,62 +389,28 @@ export default function NumeralesSection({
                           </td>
 
                           {/* Código */}
-                          <td className="py-3 px-4 align-middle">
-                            {isExpanded ? (
-                              <input
-                                type="text"
-                                value={row.codigo}
-                                onChange={(e) => handleUpdateRow(row.id, 'codigo', e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500 font-mono"
-                                placeholder="Ej. 4.1.1"
-                              />
-                            ) : (
-                              <span className="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-indigo-300 font-mono font-bold inline-block">
-                                {row.codigo}
-                              </span>
-                            )}
+                          <td className="py-3 px-4 align-top">
+                            <input
+                              type="text"
+                              value={row.codigo}
+                              onChange={(e) => handleUpdateRow(row.id, 'codigo', e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-2 text-xs text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500 font-mono"
+                              placeholder="Ej. 4.1.1"
+                            />
                           </td>
 
-                          {/* Requisito: Reducido vs Expandido */}
-                          <td className="py-3 px-4 align-middle">
-                            {isExpanded ? (
-                              <div className="space-y-1.5">
-                                <AutoResizeTextarea
-                                  value={row.requisito}
-                                  onChange={(e) => handleUpdateRow(row.id, 'requisito', e.target.value)}
-                                  className="w-full bg-slate-950 border border-indigo-500/50 rounded-lg px-3 py-2 text-xs text-white leading-relaxed focus:outline-none focus:border-indigo-400 shadow-inner"
-                                  placeholder="Ingrese la exigencia técnica del subnumeral..."
-                                />
-                                <div className="flex justify-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleRowExpand(row.id)}
-                                    className="text-[11px] font-semibold text-slate-400 hover:text-indigo-300 flex items-center gap-1"
-                                  >
-                                    <ChevronUp className="w-3 h-3" />
-                                    <span>Reducir</span>
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div 
-                                onClick={() => handleToggleRowExpand(row.id)}
-                                className="cursor-pointer group flex items-center justify-between gap-3 bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-indigo-500/40 rounded-xl px-3.5 py-2 transition-all"
-                                title="Haga clic para expandir y ver o editar el requisito completo"
-                              >
-                                <p className="text-xs text-slate-300 truncate max-w-2xl font-normal group-hover:text-white leading-tight">
-                                  {row.requisito || <span className="italic text-slate-500">Sin texto de requisito definido</span>}
-                                </p>
-                                <span className="text-[11px] text-indigo-400 group-hover:text-indigo-300 font-semibold shrink-0 flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                                  <span>Expandir</span>
-                                  <ChevronDown className="w-3 h-3" />
-                                </span>
-                              </div>
-                            )}
+                          {/* Requisito */}
+                          <td className="py-3 px-4 align-top">
+                            <AutoResizeTextarea
+                              value={row.requisito}
+                              onChange={(e) => handleUpdateRow(row.id, 'requisito', e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white leading-relaxed focus:outline-none focus:border-indigo-500"
+                              placeholder="Ingrese la exigencia técnica del subnumeral..."
+                            />
                           </td>
 
                           {/* Estado Auditoría (Idéntico al Dashboard) */}
-                          <td className="py-3 px-4 align-middle text-center">
+                          <td className="py-3 px-4 align-top text-center">
                             {isSubsanado ? (
                               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 shadow-sm bg-teal-500/20 text-teal-300 border-teal-500/40">
                                 <CheckCheck className="w-3.5 h-3.5 text-teal-300" />
