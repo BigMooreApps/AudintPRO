@@ -415,56 +415,7 @@ export default function EvidenciasSection({
                       </div>
                     </div>
 
-                    {/* Botón y Badges de OCR / Visión con IA */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60 text-xs">
-                      {doc.ocrApplied ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          <span>Texto Extraído con Visión IA</span>
-                        </span>
-                      ) : isScannedOrNeedsOcr ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                          <ScanLine className="w-3 h-3 text-amber-400" />
-                          <span>Escaneado / Requiere OCR</span>
-                        </span>
-                      ) : (
-                        <span className="text-[10.5px] text-slate-500 font-mono">
-                          Texto digital nativo
-                        </span>
-                      )}
-
-                      {/* Botón de Forzar Lectura con IA */}
-                      <button
-                        type="button"
-                        disabled={isOcrLoading}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTriggerAIOcr(doc);
-                        }}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
-                          isOcrLoading
-                            ? 'bg-indigo-950 text-indigo-300 border border-indigo-500/30 cursor-wait'
-                            : isScannedOrNeedsOcr
-                            ? 'bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white shadow-md shadow-indigo-600/20 active:scale-95'
-                            : 'bg-slate-950 hover:bg-slate-800 text-indigo-300 border border-slate-800 hover:border-indigo-500/40'
-                        }`}
-                        title="Extraer todo el texto con reconocimiento visual de IA"
-                      >
-                        {isOcrLoading ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-                            <span>Procesando OCR...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                            <span>{doc.ocrApplied ? 'Re-escanear IA' : 'Forzar Lectura con IA'}</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Barra de progreso de OCR */}
+                    {/* Barra de progreso de OCR cuando este documento se está procesando */}
                     {isOcrLoading && (
                       <div className="bg-slate-950 p-2.5 rounded-xl border border-indigo-500/30 space-y-1.5 animate-in fade-in">
                         <div className="flex items-center justify-between text-[10.5px] text-indigo-300">
