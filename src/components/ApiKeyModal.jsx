@@ -108,10 +108,10 @@ export default function ApiKeyModal({
                 onChange={(e) => setModel(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
               >
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Recomendado / Alta Disponibilidad)</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Máxima Cuota Gratuita)</option>
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Recomendado / Máxima Cuota Gratuita)</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash 8B (Ultra Rápido)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Razonamiento Profundo)</option>
               </select>
             ) : (
               <select

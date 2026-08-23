@@ -25,7 +25,6 @@ export async function renderPdfPagesToImages(fileOrBlob, maxPages = 20) {
     const arrayBuffer = await fileOrBlob.arrayBuffer();
     uint8Data = new Uint8Array(arrayBuffer);
   } else if (typeof fileOrBlob === 'string' && fileOrBlob.startsWith('data:')) {
-    // Si viene como base64 data URI
     const base64 = fileOrBlob.split(',')[1] || fileOrBlob;
     const binaryStr = atob(base64);
     uint8Data = new Uint8Array(binaryStr.length);
@@ -217,15 +216,17 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress) {
 }
 
 // ─────────────────────────────────────────────
-// OCR CON GEMINI VISION
+// OCR CON GEMINI VISION (Resiliente y Multiversión)
 // ─────────────────────────────────────────────
 async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
+  const cleanKey = (apiKey || '').trim();
   const modelsPool = [
-    preferredModel || 'gemini-2.0-flash',
-    'gemini-2.0-flash',
+    preferredModel,
     'gemini-1.5-flash',
-    'gemini-2.5-flash'
-  ].filter((v, i, a) => a.indexOf(v) === i);
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-pro'
+  ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
 
   const prompt = `Actúa como un motor de OCR y Visión Documental de máxima precisión para auditorías ISO/IEC 17025.
 Transcribe fielmente TODO el texto que aparece en esta página del documento escaneado/fotografiado.
@@ -259,28 +260,44 @@ Instrucciones Críticas:
   let lastError = null;
 
   for (const model of modelsPool) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    // Intentar primero con v1beta y luego con v1 si diera 404
+    const endpoints = [
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`,
+      `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`
+    ];
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-goog-api-key': cleanKey
+          },
+          body: JSON.stringify(requestBody)
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        const candidate = data.candidates?.[0];
-        const textPart = candidate?.content?.parts?.[0]?.text;
-        if (textPart) {
-          return textPart.trim();
+        if (response.ok) {
+          const data = await response.json();
+          const candidate = data.candidates?.[0];
+          const textPart = candidate?.content?.parts?.[0]?.text;
+          if (textPart) {
+            return textPart.trim();
+          }
+        } else {
+          const errText = await response.text();
+          let parsedMsg = errText;
+          try {
+            const errJson = JSON.parse(errText);
+            if (errJson.error?.message) {
+              parsedMsg = errJson.error.message;
+            }
+          } catch (_) {}
+          lastError = new Error(`Error en API Gemini (${model}): ${response.status} - ${parsedMsg}`);
         }
-      } else {
-        const errText = await response.text();
-        lastError = new Error(`Error en API Gemini (${model}): ${response.status} - ${errText}`);
+      } catch (fetchErr) {
+        lastError = fetchErr;
       }
-    } catch (fetchErr) {
-      lastError = fetchErr;
     }
   }
 
@@ -291,6 +308,7 @@ Instrucciones Críticas:
 // OCR CON OPENAI VISION
 // ─────────────────────────────────────────────
 async function ocrPageWithOpenAI(pageImg, apiKey, preferredModel) {
+  const cleanKey = (apiKey || '').trim();
   const model = preferredModel || 'gpt-4o-mini';
 
   const prompt = `Actúa como un motor de OCR y Visión Documental de máxima precisión para auditorías ISO/IEC 17025.
@@ -320,14 +338,21 @@ No agregues comentarios ni introducciones; devuelve únicamente el texto transcr
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+      'Authorization': `Bearer ${cleanKey}`
     },
     body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Error en API OpenAI (${model}): ${response.status} - ${errText}`);
+    let parsedMsg = errText;
+    try {
+      const errJson = JSON.parse(errText);
+      if (errJson.error?.message) {
+        parsedMsg = errJson.error.message;
+      }
+    } catch (_) {}
+    throw new Error(`Error en API OpenAI (${model}): ${response.status} - ${parsedMsg}`);
   }
 
   const data = await response.json();
