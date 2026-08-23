@@ -6,6 +6,8 @@
  * Sistema anti-429 con alternancia inteligente de modelos multicuota y reintentos automáticos.
  */
 
+import { getAvailableGeminiModels } from './ocrService';
+
 export async function runAIAuditAnalysis(numerales, evidenciasList, apiConfig = {}, customPrompt = '') {
   const { provider, apiKey, model } = apiConfig;
 
@@ -126,24 +128,34 @@ Debes responder OBLIGATORIAMENTE en formato JSON con esta estructura exacta:
     }
   };
 
-  // Modelos oficiales con cuotas independientes en Google AI Studio
-  const selected = modelName || 'gemini-2.0-flash';
-  const modelsPool = [
-    selected,
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-2.5-flash'
-  ].filter((v, i, a) => a.indexOf(v) === i);
+  // Consultar dinámicamente los modelos soportados por la API key
+  const availableModels = await getAvailableGeminiModels(apiKey);
+  const selected = modelName || 'gemini-1.5-flash';
+  
+  const modelsPool = [];
+  if (selected && availableModels.includes(selected)) {
+    modelsPool.push(selected);
+  }
+  availableModels.forEach(m => {
+    if (!modelsPool.includes(m)) modelsPool.push(m);
+  });
+
+  if (modelsPool.length === 0) {
+    modelsPool.push('gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro');
+  }
 
   let lastError = null;
 
   for (const currentModel of modelsPool) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
         body: JSON.stringify(requestBody)
       });
 

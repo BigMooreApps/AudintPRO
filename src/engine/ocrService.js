@@ -11,6 +11,60 @@ if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
   }
 }
 
+// Cache temporal de modelos disponibles de Gemini
+let cachedGeminiModels = null;
+let lastModelFetchTime = 0;
+
+/**
+ * Consulta dinámicamente a la API de Google los modelos soportados por la clave API
+ */
+export async function getAvailableGeminiModels(apiKey) {
+  const now = Date.now();
+  if (cachedGeminiModels && (now - lastModelFetchTime < 120000)) {
+    return cachedGeminiModels;
+  }
+
+  const cleanKey = (apiKey || '').trim();
+  if (!cleanKey) return [];
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanKey)}`, {
+      headers: { 'x-goog-api-key': cleanKey }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data.models)) {
+        const validModels = data.models
+          .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+          .map(m => m.name.replace(/^models\//, ''));
+        
+        if (validModels.length > 0) {
+          cachedGeminiModels = validModels;
+          lastModelFetchTime = now;
+          return validModels;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('No se pudo listar modelos dinámicamente de Gemini:', e);
+  }
+
+  // Lista de modelos oficiales por orden de compatibilidad
+  return [
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash-002',
+    'gemini-1.5-flash-001',
+    'gemini-1.5-flash',
+    'gemini-2.0-flash-exp',
+    'gemini-1.5-pro-latest',
+    'gemini-1.5-pro-002',
+    'gemini-1.5-pro-001',
+    'gemini-1.5-pro'
+  ];
+}
+
 /**
  * Renderiza las páginas de un archivo PDF a imágenes JPEG en Base64
  */
@@ -174,7 +228,6 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress) {
       : await ocrPageWithGemini(pImg, apiKey.trim(), model);
 
     if (ocrText && ocrText.trim().length > 0) {
-      // Detectar título o primera sección relevante
       const lines = ocrText.split('\n').filter(l => l.trim().length > 0);
       let detectedSection = `Página ${pageNum}`;
       for (const line of lines.slice(0, 4)) {
@@ -216,17 +269,21 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress) {
 }
 
 // ─────────────────────────────────────────────
-// OCR CON GEMINI VISION (Resiliente y Multiversión)
+// OCR CON GEMINI VISION (Detección Dinámica de Modelos)
 // ─────────────────────────────────────────────
 async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
   const cleanKey = (apiKey || '').trim();
-  const modelsPool = [
-    preferredModel,
-    'gemini-1.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-pro'
-  ].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+  const availableModels = await getAvailableGeminiModels(cleanKey);
+
+  // Ordenar modelos con prioridad: modelo preferido -> flash -> pro
+  const candidateModels = [];
+  if (preferredModel && availableModels.includes(preferredModel)) {
+    candidateModels.push(preferredModel);
+  }
+  
+  availableModels.forEach(m => {
+    if (!candidateModels.includes(m)) candidateModels.push(m);
+  });
 
   const prompt = `Actúa como un motor de OCR y Visión Documental de máxima precisión para auditorías ISO/IEC 17025.
 Transcribe fielmente TODO el texto que aparece en esta página del documento escaneado/fotografiado.
@@ -259,45 +316,39 @@ Instrucciones Críticas:
 
   let lastError = null;
 
-  for (const model of modelsPool) {
-    // Intentar primero con v1beta y luego con v1 si diera 404
-    const endpoints = [
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`,
-      `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`
-    ];
+  for (const model of candidateModels) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
 
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-goog-api-key': cleanKey
-          },
-          body: JSON.stringify(requestBody)
-        });
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-goog-api-key': cleanKey
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          const candidate = data.candidates?.[0];
-          const textPart = candidate?.content?.parts?.[0]?.text;
-          if (textPart) {
-            return textPart.trim();
-          }
-        } else {
-          const errText = await response.text();
-          let parsedMsg = errText;
-          try {
-            const errJson = JSON.parse(errText);
-            if (errJson.error?.message) {
-              parsedMsg = errJson.error.message;
-            }
-          } catch (_) {}
-          lastError = new Error(`Error en API Gemini (${model}): ${response.status} - ${parsedMsg}`);
+      if (response.ok) {
+        const data = await response.json();
+        const candidate = data.candidates?.[0];
+        const textPart = candidate?.content?.parts?.[0]?.text;
+        if (textPart) {
+          return textPart.trim();
         }
-      } catch (fetchErr) {
-        lastError = fetchErr;
+      } else {
+        const errText = await response.text();
+        let parsedMsg = errText;
+        try {
+          const errJson = JSON.parse(errText);
+          if (errJson.error?.message) {
+            parsedMsg = errJson.error.message;
+          }
+        } catch (_) {}
+        lastError = new Error(`Error en API Gemini (${model}): ${response.status} - ${parsedMsg}`);
       }
+    } catch (fetchErr) {
+      lastError = fetchErr;
     }
   }
 
