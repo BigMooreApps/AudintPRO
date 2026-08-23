@@ -354,6 +354,82 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetP
 }
 
 // ─────────────────────────────────────────────
+// LIMPIEZA DE TRAZAS DE RAZONAMIENTO Y FORMATO
+// ─────────────────────────────────────────────
+export function cleanExtractedOcrText(rawText) {
+  if (!rawText) return '';
+
+  let cleaned = rawText.trim();
+
+  // Si el modelo incluyó un marcador de borrador final
+  if (cleaned.includes('*Drafting the final response...*')) {
+    const parts = cleaned.split('*Drafting the final response...*');
+    cleaned = parts[parts.length - 1].trim();
+  }
+  if (cleaned.includes('Drafting the final response...')) {
+    const parts = cleaned.split('Drafting the final response...');
+    cleaned = parts[parts.length - 1].trim();
+  }
+
+  // Filtrar líneas de metadatos mecánicos de razonamiento al inicio
+  const lines = cleaned.split('\n');
+  const filteredLines = [];
+  let skippingPreamble = true;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (skippingPreamble) {
+      if (
+        trimmed.startsWith('* Role:') ||
+        trimmed.startsWith('* Task:') ||
+        trimmed.startsWith('* Input:') ||
+        trimmed.startsWith('* Constraints:') ||
+        trimmed.startsWith('* Specific Requirements:') ||
+        trimmed.startsWith('* *Header (to be ignored):') ||
+        trimmed.startsWith('* *Watermark (to be ignored):') ||
+        trimmed.startsWith('* *Process Map Content:') ||
+        trimmed.startsWith('* *Executive Explanation:*') ||
+        trimmed.startsWith('* *Breakdown:*') ||
+        trimmed.startsWith('* *Audit Relevance') ||
+        trimmed.startsWith('* Step 1:') ||
+        trimmed.startsWith('* Step 2:') ||
+        trimmed.startsWith('* Step 3:') ||
+        trimmed.startsWith('Role:') ||
+        trimmed.startsWith('Task:') ||
+        trimmed.startsWith('Constraints:') ||
+        trimmed.startsWith('(Self-Correction') ||
+        trimmed.startsWith('*Check against') ||
+        trimmed.includes('Drafting the final response')
+      ) {
+        if (trimmed.startsWith('* *Executive Explanation:*')) {
+          skippingPreamble = false;
+          filteredLines.push(trimmed.replace('* *Executive Explanation:*', '').trim());
+        }
+        continue;
+      }
+
+      if (trimmed.length > 0) {
+        skippingPreamble = false;
+        filteredLines.push(line);
+      }
+    } else {
+      if (
+        trimmed.startsWith('(Self-Correction') ||
+        trimmed.startsWith('*Check against') ||
+        trimmed.startsWith('(This matches the provided')
+      ) {
+        continue;
+      }
+      filteredLines.push(line);
+    }
+  }
+
+  return filteredLines.join('\n').trim();
+}
+
+// ─────────────────────────────────────────────
 // OCR CON GEMINI VISION (Detección Dinámica de Modelos)
 // ─────────────────────────────────────────────
 async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
@@ -369,45 +445,40 @@ async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
     if (!candidateModels.includes(m)) candidateModels.push(m);
   });
 
-  const prompt = `Actúa como un Auditor y Especialista en Sistemas de Gestión de Calidad ISO/IEC 17025 e ISO 9001.
+  const systemPrompt = `Eres un Auditor y Especialista en Gestión de Calidad ISO/IEC 17025 e ISO 9001.
+Tu misión es entregar una síntesis limpia, directa, ejecutiva y humana de la página o imagen.
+NUNCA expliques tus pasos de pensamiento, ni menciones 'Role:', 'Task:', 'Drafting:', etc.
+NUNCA extraigas tablas de encabezados (logos, código MCL-001, versión, fechas, número de página) ni marcas de agua.
+Entrega directamente la descripción del diagrama y el texto sustantivo.`;
 
-Analiza de manera clara, natural, ejecutiva y estructurada la página o imagen proporcionada:
+  const userPrompt = `Analiza esta imagen y entrega únicamente la síntesis ejecutiva y estructurada:
 
-REGLAS DE EXTRACCIÓN Y FORMATO:
-1. NO EXTRAIGAS ENCABEZADOS NI PIES DE PÁGINA:
-   - Omite tablas de encabezados repetitivas (logos, código MCL-001, versión, fechas, número de página 11/42, etc.).
-   - Omite marcas de agua (ej. 'DOCUMENTO CONTROLADO').
-   - Omite pies de página.
+1. Si es un MAPA DE PROCESOS o DIAGRAMA:
+- Breve párrafo inicial explicando qué es la imagen y su propósito (ej: "Esta imagen es un mapa de procesos diseñado bajo el enfoque de gestión de calidad...").
+- Desglose estructurado:
+  * **Entradas (Izquierda)**: Necesidades del mercado y requisitos del servicio.
+  * **Procesos Estratégicos (Arriba)**: Toma de decisiones y planeación (Dirección, Planeación, etc.).
+  * **Procesos Operativos / Clave (Centro)**: Ciclo central de negocio del laboratorio (Licitaciones, Muestreo, Análisis, etc.).
+  * **Procesos de Apoyo / Soporte (Abajo)**: Procesos de soporte (Compras, Calidad, Metrología, Administración).
+  * **Salidas (Derecha)**: Servicios finales y satisfacción del cliente.
+- Breve párrafo de relevancia para la auditoría ISO/IEC 17025.
 
-2. SI LA IMAGEN CONTIENE UN MAPA DE PROCESOS, ORGANIGRAMA O DIAGRAMA:
-   - Inicia con una breve explicación ejecutiva y natural de qué es la imagen y su propósito en la organización (ej: "Esta imagen es un mapa de procesos diseñado bajo el enfoque de gestión de calidad...").
-   - Presenta un desglose claro y elegante de su estructura:
-     * Para Mapas de Procesos:
-       - **Entradas (Izquierda)**: Necesidades del mercado y requisitos del servicio.
-       - **Procesos Estratégicos (Arriba)**: Actividades de toma de decisiones y planeación (Dirección, Planeación, etc.).
-       - **Procesos Operativos / Clave (Centro)**: Ciclo central de negocio del laboratorio (Licitaciones, Muestreo, Análisis, etc.).
-       - **Procesos de Apoyo / Soporte (Abajo)**: Procesos que mantienen la operación (Compras, Calidad, Metrología, Administración).
-       - **Salidas (Derecha)**: Servicios finales prestados y satisfacción del cliente.
-     * Para Organigramas:
-       - **Nivel Directivo / Asamblea**: Máxima instancia de gobierno.
-       - **Órganos de Asesoría / Control**: Revisoría fiscal, oficial de cumplimiento.
-       - **Gerencia General**: Dirección ejecutiva principal.
-       - **Gerencias / Direcciones de Línea**: Detalle de cada área y sus respectivos cargos subordinados.
-   - Añade un breve párrafo conciso sobre su relevancia para la auditoría (numerales clave de ISO/IEC 17025).
+2. Si es un ORGANIGRAMA:
+- Breve explicación del organigrama.
+- Desglose por niveles (Directivo, Asesoría/Control, Gerencia General, Gerencias/Direcciones de Línea).
 
-3. SI LA PÁGINA CONTIENE TEXTO TÉCNICO O PÁRRAFOS DEL CUERPO:
-   - Transcribe íntegramente el texto sustantivo respetando párrafos y numerales.
-
-4. ESTILO:
-   - Redacción 100% natural, fluida, ejecutiva y humana.
-   - Cero metadatos mecánicos ("* Role:...", "* Step 1:..."), directo al contenido.`;
+3. Si hay TEXTO TÉCNICO en el cuerpo:
+- Transcribe íntegramente las frases del cuerpo (omitiendo encabezados y pies de página).`;
 
   const requestBody = {
+    systemInstruction: {
+      parts: [{ text: systemPrompt }]
+    },
     contents: [
       {
         role: 'user',
         parts: [
-          { text: prompt },
+          { text: userPrompt },
           {
             inlineData: {
               mimeType: pageImg.mimeType,
@@ -442,7 +513,7 @@ REGLAS DE EXTRACCIÓN Y FORMATO:
         const candidate = data.candidates?.[0];
         const textPart = candidate?.content?.parts?.[0]?.text;
         if (textPart) {
-          return textPart.trim();
+          return cleanExtractedOcrText(textPart);
         }
       } else {
         const errText = await response.text();
@@ -470,46 +541,32 @@ async function ocrPageWithOpenAI(pageImg, apiKey, preferredModel) {
   const cleanKey = (apiKey || '').trim();
   const model = preferredModel || 'gpt-4o-mini';
 
-  const prompt = `Actúa como un Auditor y Especialista en Sistemas de Gestión de Calidad ISO/IEC 17025 e ISO 9001.
+  const systemPrompt = `Eres un Auditor y Especialista en Gestión de Calidad ISO/IEC 17025 e ISO 9001.
+Entrega directamente la síntesis ejecutiva del diagrama y el texto del documento.
+NUNCA extraigas tablas de encabezados (logos, código MCL-001, versión, fechas, número de página) ni marcas de agua.
+NUNCA emitas pasos de razonamiento interno, ni notas de rol.`;
 
-Analiza de manera clara, natural, ejecutiva y estructurada la página o imagen proporcionada:
-
-REGLAS DE EXTRACCIÓN Y FORMATO:
-1. NO EXTRAIGAS ENCABEZADOS NI PIES DE PÁGINA:
-   - Omite tablas de encabezados repetitivas (logos, código MCL-001, versión, fechas, número de página 11/42, etc.).
-   - Omite marcas de agua (ej. 'DOCUMENTO CONTROLADO').
-   - Omite pies de página.
-
-2. SI LA IMAGEN CONTIENE UN MAPA DE PROCESOS, ORGANIGRAMA O DIAGRAMA:
-   - Inicia con una breve explicación ejecutiva y natural de qué es la imagen y su propósito en la organización.
-   - Presenta un desglose claro y elegante de su estructura:
-     * Para Mapas de Procesos:
-       - **Entradas (Izquierda)**: Necesidades del mercado y requisitos del servicio.
-       - **Procesos Estratégicos (Arriba)**: Actividades de toma de decisiones y planeación (Dirección, Planeación, etc.).
-       - **Procesos Operativos / Clave (Centro)**: Ciclo central de negocio del laboratorio (Licitaciones, Muestreo, Análisis, etc.).
-       - **Procesos de Apoyo / Soporte (Abajo)**: Procesos que mantienen la operación (Compras, Calidad, Metrología, Administración).
-       - **Salidas (Derecha)**: Servicios finales prestados y satisfacción del cliente.
-     * Para Organigramas:
-       - **Nivel Directivo / Asamblea**: Máxima instancia de gobierno.
-       - **Órganos de Asesoría / Control**: Revisoría fiscal, oficial de cumplimiento.
-       - **Gerencia General**: Dirección ejecutiva principal.
-       - **Gerencias / Direcciones de Línea**: Detalle de cada área y sus respectivos cargos subordinados.
-   - Añade un breve párrafo conciso sobre su relevancia para la auditoría (numerales clave de ISO/IEC 17025).
-
-3. SI LA PÁGINA CONTIENE TEXTO TÉCNICO O PÁRRAFOS DEL CUERPO:
-   - Transcribe íntegramente el texto sustantivo respetando párrafos y numerales.
-
-4. ESTILO:
-   - Redacción 100% natural, fluida, ejecutiva y humana.
-   - Cero metadatos mecánicos ("* Role:...", "* Step 1:..."), directo al contenido.`;
+  const userPrompt = `Analiza esta imagen y entrega únicamente la síntesis ejecutiva y estructurada:
+1. Si es MAPA DE PROCESOS o DIAGRAMA:
+- Breve párrafo inicial explicando qué es la imagen y su propósito.
+- Desglose estructurado:
+  * **Entradas (Izquierda)**: Necesidades y requisitos.
+  * **Procesos Estratégicos (Arriba)**: Dirección y planeación.
+  * **Procesos Operativos / Clave (Centro)**: Licitaciones, Muestreo, Análisis, etc.
+  * **Procesos de Apoyo / Soporte (Abajo)**: Compras, Calidad, Metrología, Administración.
+  * **Salidas (Derecha)**: Servicio y satisfacción del cliente.
+- Breve párrafo de relevancia para auditoría ISO/IEC 17025.
+2. Si es ORGANIGRAMA: Desglose claro por niveles jerárquicos.
+3. Si hay TEXTO TÉCNICO en el cuerpo: Transcríbelo íntegramente (sin encabezados ni pies de página).`;
 
   const requestBody = {
     model,
     messages: [
+      { role: 'system', content: systemPrompt },
       {
         role: 'user',
         content: [
-          { type: 'text', text: prompt },
+          { type: 'text', text: userPrompt },
           {
             type: 'image_url',
             image_url: {
@@ -544,5 +601,6 @@ REGLAS DE EXTRACCIÓN Y FORMATO:
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content?.trim() || '';
+  const textContent = data.choices?.[0]?.message?.content?.trim() || '';
+  return cleanExtractedOcrText(textContent);
 }
