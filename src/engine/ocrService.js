@@ -371,26 +371,29 @@ async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
 
   const prompt = `Actúa como un Auditor Líder y Especialista en Visión e Inteligencia Artificial para Sistemas de Gestión ISO/IEC 17025 e ISO 9001.
 
-Analiza minuciosamente esta página o imagen y genera una extracción estructurada, semántica y analítica:
+Analiza minuciosamente esta página o imagen y genera una extracción limpia, directa y estructurada.
 
-1. SI DETECTAS DIAGRAMAS, MAPAS DE PROCESOS, ORGANIGRAMAS, FLUJOGRAMAS O ESQUEMAS:
-   - Identifica el Título y Tipo de Gráfico (ej. "Organigrama Estructural", "Mapa de Procesos Técnicos / SIPOC", "Flujograma Operativo").
-   - Detalla la Jerarquía y Conexiones en texto claro:
-     * Para Organigramas: Nivel Directivo / Asamblea -> Órganos de Control -> Gerencia General -> Gerencias de Línea -> Coordinaciones y Cargos.
-     * Para Mapas de Procesos: Clasifica en Procesos Estratégicos, Misionales/Operativos y de Apoyo, relacionando Entradas y Salidas.
-   - Proporciona un [ANÁLISIS FUNCIONAL ISO/IEC 17025] explicando la relevancia del gráfico para la norma (ej: Numeral 5.1/5.5 Estructura y Autoridad, Numeral 4.1 Imparcialidad, Numeral 8.1 Sistema de Gestión).
-   - Genera el diagrama Mermaid (\`\`\`mermaid ... \`\`\`) aplicando ESTAS REGLAS ESTRICTAS DE DIAGRAMACIÓN LIMPIA:
-     * Para Mapas de Procesos: Usa SIEMPRE \`flowchart LR\` con 3 subgrafos ordenados: \`subgraph ENTRADAS["📥 ENTRADAS"]\`, \`subgraph PROCESOS["⚙️ PROCESOS"]\` (con Estratégicos, Misionales y Apoyo) y \`subgraph SALIDAS["📤 SALIDAS"]\`. Conecta las entradas hacia los misionales, estratégicos hacia misionales y misionales hacia salidas sin cruzar flechas diagonales desordenadas.
+REGLAS CRÍTICAS DE EXCLUSIÓN Y FORMATO:
+1. NO EXTRAIGAS NI TRANSCRIBAS ENCABEZADOS NI PIES DE PÁGINA:
+   - Omite tablas de encabezados (logos, nombre de la empresa, código de documento tipo MCL-001, versión, fechas, número de página 11/42, etc.).
+   - Omite marcas de agua (ej. 'DOCUMENTO CONTROLADO').
+   - Omite pies de página repetitivos.
+   - Concéntrate EXCLUSIVAMENTE en el contenido técnico sustantivo del cuerpo y en los diagramas.
+
+2. ENTREGA DIRECTA SIN METADATOS NI PASOS DE PENSAMIENTO:
+   - PROHIBIDO incluir introducciones, notas de rol ("* Role:...", "* Task:..."), requerimientos ("* Specific Requirements..."), o listas de pasos ("* Step 1:...").
+   - Devuelve ÚNICAMENTE el resultado final directamente.
+
+3. SI HAY DIAGRAMAS, MAPAS DE PROCESOS U ORGANIGRAMAS:
+   - Título y Tipo de Gráfico.
+   - Jerarquía y Conexiones clave.
+   - [ANÁLISIS FUNCIONAL ISO/IEC 17025] (relevancia técnica y normativa para numerales 4, 5, 6, 7 y 8).
+   - Diagrama Mermaid (\`\`\`mermaid ... \`\`\`) aplicando REGLAS DE DIAGRAMACIÓN LIMPIA:
+     * Para Mapas de Procesos: Usa SIEMPRE \`flowchart LR\` con 3 subgrafos ordenados (\`subgraph ENTRADAS\`, \`subgraph PROCESOS\` con Estratégicos, Misionales y Apoyo, y \`subgraph SALIDAS\`). Conecta en bloques limpios sin cruzar flechas diagonales desordenadas.
      * Para Organigramas: Usa SIEMPRE \`flowchart TD\` con jerarquía limpia de arriba hacia abajo (Asamblea -> Gerencia General -> Direcciones/Gerencias -> Cargos).
-     * Usa identificadores limpios y textos concisos entre corchetes y comillas (ej. N1["Gestión Gerencial"]).
 
-2. SI DETECTAS TEXTO CONVENCIONAL, TABLAS, FIRMAS O FORMULARIOS:
-   - Transcribe íntegramente todo el texto respetando títulos, numerales, cláusulas, listas y notas.
-   - Transcribe tablas completas en formato Markdown estructurado.
-   - Registra nombres, cargos, cédulas, firmas y fechas.
-
-3. FORMA DE RESPUESTA:
-   - Entrega una transcripción limpia y estructurada combinando el análisis del texto y los diagramas.`;
+4. SI HAY TEXTO TÉCNICO, CLÁUSULAS O TABLAS DEL CUERPO:
+   - Transcribe el texto sustantivo respetando párrafos, numerales y listas.`;
 
   const requestBody = {
     contents: [
@@ -462,17 +465,26 @@ async function ocrPageWithOpenAI(pageImg, apiKey, preferredModel) {
 
   const prompt = `Actúa como un Auditor Líder y Especialista en Visión e Inteligencia Artificial para Sistemas de Gestión ISO/IEC 17025 e ISO 9001.
 
-Analiza minuciosamente esta página o imagen y genera una extracción estructurada, semántica y analítica:
-1. SI DETECTAS DIAGRAMAS, MAPAS DE PROCESOS, ORGANIGRAMAS O FLUJOGRAMAS:
-   - Identifica Título y Tipo de Gráfico.
-   - Detalla Jerarquía y Conexiones (quién reporta a quién, entradas -> procesos -> salidas).
-   - Genera un [ANÁLISIS FUNCIONAL ISO/IEC 17025] explicando su relevancia para la norma (ej: Numeral 5.1/5.5 Estructura y Autoridad, Numeral 4.1 Imparcialidad, Numeral 8.1 Sistema de Gestión).
-   - Genera el diagrama Mermaid (\`\`\`mermaid ... \`\`\`) aplicando REGLAS DE DIAGRAMACIÓN LIMPIA:
-     * Para Mapas de Procesos: Usa SIEMPRE \`flowchart LR\` con 3 subgrafos ordenados (\`subgraph ENTRADAS\`, \`subgraph PROCESOS\` con Estratégicos, Misionales y Apoyo, y \`subgraph SALIDAS\`). Conecta en bloques limpios sin cruzar flechas diagonales desordenadas.
-     * Para Organigramas: Usa SIEMPRE \`flowchart TD\` con jerarquía limpia de arriba hacia abajo (Asamblea -> Gerencia General -> Direcciones/Gerencias -> Cargos).
-2. SI DETECTAS TEXTO O TABLAS:
-   - Transcribe íntegramente respetando cláusulas, numerales, tablas y firmas.
-3. Responde de forma limpia y estructurada.`;
+Analiza minuciosamente esta página o imagen y genera una extracción limpia, directa y estructurada:
+
+REGLAS CRÍTICAS DE EXCLUSIÓN Y FORMATO:
+1. NO EXTRAIGAS NI TRANSCRIBAS ENCABEZADOS NI PIES DE PÁGINA:
+   - Omite tablas de encabezados (logos, nombre de la empresa, código MCL-001, versión, fechas, página 11/42, etc.).
+   - Omite marcas de agua (ej. 'DOCUMENTO CONTROLADO').
+   - Omite pies de página repetitivos.
+   - Concéntrate EXCLUSIVAMENTE en el contenido técnico sustantivo del cuerpo y en los diagramas.
+
+2. ENTREGA DIRECTA SIN METADATOS NI PASOS DE PENSAMIENTO:
+   - PROHIBIDO incluir introducciones o notas de rol ("* Role:...", "* Step 1:..."). Devuelve directamente el resultado.
+
+3. SI HAY DIAGRAMAS, MAPAS DE PROCESOS U ORGANIGRAMAS:
+   - Título y Tipo de Gráfico.
+   - Jerarquía y Conexiones clave.
+   - [ANÁLISIS FUNCIONAL ISO/IEC 17025] (relevancia para numerales 4, 5, 6, 7 y 8).
+   - Diagrama Mermaid (\`\`\`mermaid ... \`\`\`) con reglas limpias (LR para procesos, TD para organigramas).
+
+4. SI HAY TEXTO TÉCNICO:
+   - Transcribe el texto sustantivo del cuerpo respetando párrafos y numerales.`;
 
   const requestBody = {
     model,
