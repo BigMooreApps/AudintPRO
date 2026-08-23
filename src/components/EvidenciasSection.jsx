@@ -24,6 +24,7 @@ import { parseDocument } from '../engine/textExtractor';
 import { performAIOcrExtraction, parsePageRange } from '../engine/ocrService';
 import { setCachedFile, getCachedFile, isTrueBlobOrFile } from '../engine/fileCache';
 import ConfirmDialogModal from './ConfirmDialogModal';
+import MermaidViewer from './MermaidViewer';
 
 function RenderExtractedContent({ item, docType }) {
   // Si tablaData está presente (desde parseExcel o parseCSV)
@@ -97,6 +98,48 @@ function RenderExtractedContent({ item, docType }) {
         );
       }
     }
+  }
+
+  const rawText = item.texto || '';
+
+  // Detección y renderizado interactivo de diagramas Mermaid y análisis de organigramas/procesos
+  const mermaidMatch = rawText.match(/```mermaid([\s\S]*?)```/i);
+
+  if (mermaidMatch) {
+    const mermaidCode = mermaidMatch[1].trim();
+    const textBefore = rawText.substring(0, mermaidMatch.index).trim();
+    const textAfter = rawText.substring(mermaidMatch.index + mermaidMatch[0].length).trim();
+
+    return (
+      <div className="space-y-3 font-sans">
+        {textBefore && (
+          <div className="text-slate-200 bg-slate-900/70 p-3.5 rounded-xl border border-slate-800 leading-relaxed font-mono whitespace-pre-line text-[11.5px] select-text">
+            {textBefore}
+          </div>
+        )}
+
+        {/* Bloque interactivo de Diagrama / Organigrama */}
+        <div className="border border-indigo-500/30 rounded-2xl bg-slate-950 p-4 shadow-xl space-y-2.5">
+          <div className="flex items-center justify-between text-xs border-b border-slate-800/80 pb-2">
+            <span className="font-bold text-indigo-300 flex items-center gap-1.5">
+              <Layers className="w-4 h-4 text-indigo-400" />
+              <span>Diagrama / Organigrama Estructurado por IA</span>
+            </span>
+            <span className="text-[10px] text-emerald-400 font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+              ✓ Renderizado Interactivo
+            </span>
+          </div>
+
+          <MermaidViewer chartCode={mermaidCode} />
+        </div>
+
+        {textAfter && (
+          <div className="text-slate-200 bg-slate-900/70 p-3.5 rounded-xl border border-slate-800 leading-relaxed font-mono whitespace-pre-line text-[11.5px] select-text">
+            {textAfter}
+          </div>
+        )}
+      </div>
+    );
   }
 
   // Texto estándar para PDF, DOCX, TXT u OCR con formato de párrafos

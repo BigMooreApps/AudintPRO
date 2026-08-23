@@ -369,14 +369,25 @@ async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
     if (!candidateModels.includes(m)) candidateModels.push(m);
   });
 
-  const prompt = `Actúa como un motor de OCR y Visión Documental de máxima precisión para auditorías ISO/IEC 17025.
-Transcribe fielmente TODO el texto que aparece en esta página del documento escaneado/fotografiado.
+  const prompt = `Actúa como un Auditor Líder y Especialista en Visión e Inteligencia Artificial para Sistemas de Gestión ISO/IEC 17025 e ISO 9001.
 
-Instrucciones Críticas:
-1. Transcribe exactamente todo el texto: títulos, numerales, cláusulas, listas, nombres de personas, números de documento/cédula, cargos, fechas, firmas y notas al pie.
-2. Mantén la estructura y párrafos originales.
-3. Si hay tablas o listas con viñetas o letras (a, b, c...), transcríbelas completas.
-4. NO agregues introducciones ni explicaciones; responde ÚNICAMENTE con el texto transcrito de la página.`;
+Analiza minuciosamente esta página o imagen y genera una extracción estructurada, semántica y analítica:
+
+1. SI DETECTAS DIAGRAMAS, MAPAS DE PROCESOS, ORGANIGRAMAS, FLUJOGRAMAS O ESQUEMAS:
+   - Identifica el Título y Tipo de Gráfico (ej. "Organigrama Estructural", "Mapa de Procesos Técnicos / SIPOC", "Flujograma Operativo").
+   - Detalla la Jerarquía y Conexiones:
+     * Para Organigramas: Nivel Directivo / Asamblea -> Órganos de Control / Revisoría / Cumplimiento -> Gerencia General -> Gerencias de Línea (Técnica, HSEQ, RRHH, etc.) -> Coordinaciones y Cargos Operativos.
+     * Para Mapas de Procesos: Clasifica claramente en Procesos Estratégicos, Procesos Misionales/Operativos (Licitación, Muestreo, Ensayo, Calibración, Emisión de Resultados), Procesos de Apoyo (Compras, Metrología, Calidad, TI) y su relación con Entradas (Necesidades/Requisitos del cliente) y Salidas (Satisfacción, Servicios).
+   - Proporciona un [ANÁLISIS FUNCIONAL ISO/IEC 17025] explicando la relevancia del gráfico (ej: cumplimiento del numeral 5.1/5.5 Estructura y Autoridad, numeral 4.1 Imparcialidad, numeral 8.1 Sistema de Gestión).
+   - Genera la estructura en sintaxis de diagrama Mermaid (\`\`\`mermaid ... \`\`\`) para visualización interactiva.
+
+2. SI DETECTAS TEXTO CONVENCIONAL, TABLAS, FIRMAS O FORMULARIOS:
+   - Transcribe íntegramente todo el texto respetando títulos, numerales, cláusulas, listas y notas.
+   - Transcribe tablas completas en formato Markdown estructurado.
+   - Registra nombres, cargos, cédulas, firmas y fechas.
+
+3. FORMA DE RESPUESTA:
+   - Entrega una transcripción clara, limpia y estructurada combinando el texto de la página y el análisis semántico de los diagramas.`;
 
   const requestBody = {
     contents: [
@@ -446,9 +457,17 @@ async function ocrPageWithOpenAI(pageImg, apiKey, preferredModel) {
   const cleanKey = (apiKey || '').trim();
   const model = preferredModel || 'gpt-4o-mini';
 
-  const prompt = `Actúa como un motor de OCR y Visión Documental de máxima precisión para auditorías ISO/IEC 17025.
-Transcribe fielmente TODO el texto que aparece en esta página del documento escaneado/fotografiado.
-No agregues comentarios ni introducciones; devuelve únicamente el texto transcripto estructurado.`;
+  const prompt = `Actúa como un Auditor Líder y Especialista en Visión e Inteligencia Artificial para Sistemas de Gestión ISO/IEC 17025 e ISO 9001.
+
+Analiza minuciosamente esta página o imagen y genera una extracción estructurada, semántica y analítica:
+1. SI DETECTAS DIAGRAMAS, MAPAS DE PROCESOS, ORGANIGRAMAS O FLUJOGRAMAS:
+   - Identifica Título y Tipo de Gráfico.
+   - Detalla Jerarquía y Conexiones (quién reporta a quién, entradas -> procesos -> salidas).
+   - Genera un [ANÁLISIS FUNCIONAL ISO/IEC 17025] explicando su relevancia para la norma (ej: Numeral 5.1/5.5 Estructura y Autoridad, Numeral 4.1 Imparcialidad, Numeral 8.1 Sistema de Gestión).
+   - Genera diagrama Mermaid (\`\`\`mermaid ... \`\`\`).
+2. SI DETECTAS TEXTO O TABLAS:
+   - Transcribe íntegramente respetando cláusulas, numerales, tablas y firmas.
+3. Responde de forma limpia y estructurada.`;
 
   const requestBody = {
     model,
