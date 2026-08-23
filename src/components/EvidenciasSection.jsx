@@ -114,11 +114,14 @@ export default function EvidenciasSection({
   const [isUploading, setIsUploading] = useState(false);
   const [selectedPreviewDoc, setSelectedPreviewDoc] = useState(null);
   
-  // Estado para seguimiento de OCR en ejecución
+  // Estado para seguimiento de OCR en ejecución con porcentaje
   const [ocrLoadingState, setOcrLoadingState] = useState({
     activeDocId: null,
     message: '',
-    progressText: ''
+    progressText: '',
+    page: 0,
+    total: 0,
+    percentage: 0
   });
   const [copiedDocId, setCopiedDocId] = useState(null);
 
@@ -233,15 +236,25 @@ export default function EvidenciasSection({
     setOcrLoadingState({
       activeDocId: doc.id,
       message: 'Iniciando motor de Visión Artificial...',
-      progressText: 'Procesando páginas'
+      progressText: 'Preparando páginas...',
+      page: 0,
+      total: doc.paginas || 1,
+      percentage: 5
     });
 
     try {
       const updatedDoc = await performAIOcrExtraction(doc, apiConfig, (prog) => {
+        const page = prog.page || 0;
+        const total = prog.total || doc.paginas || 1;
+        const percentage = total > 0 ? Math.min(100, Math.round((page / total) * 100)) : 10;
+
         setOcrLoadingState({
           activeDocId: doc.id,
           message: prog.message || 'Extrayendo texto con IA...',
-          progressText: prog.page ? `Página ${prog.page} de ${prog.total}` : ''
+          progressText: prog.page ? `Página ${prog.page} de ${prog.total}` : 'Procesando...',
+          page,
+          total,
+          percentage
         });
       });
 
@@ -255,7 +268,10 @@ export default function EvidenciasSection({
       setOcrLoadingState({
         activeDocId: null,
         message: '',
-        progressText: ''
+        progressText: '',
+        page: 0,
+        total: 0,
+        percentage: 0
       });
     }
   };
@@ -420,19 +436,6 @@ export default function EvidenciasSection({
                         </button>
                       </div>
                     </div>
-
-                    {/* Barra de progreso de OCR cuando este documento se está procesando */}
-                    {isOcrLoading && (
-                      <div className="bg-slate-950 p-2.5 rounded-xl border border-indigo-500/30 space-y-1.5 animate-in fade-in">
-                        <div className="flex items-center justify-between text-[10.5px] text-indigo-300">
-                          <span className="font-semibold">{ocrLoadingState.message}</span>
-                          <span className="font-mono text-emerald-400">{ocrLoadingState.progressText}</span>
-                        </div>
-                        <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full rounded-full animate-pulse w-full" />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -491,16 +494,55 @@ export default function EvidenciasSection({
                     type="button"
                     onClick={() => handleTriggerAIOcr(selectedPreviewDoc)}
                     disabled={ocrLoadingState.activeDocId === selectedPreviewDoc.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 transition-all active:scale-95"
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 ${
+                      ocrLoadingState.activeDocId === selectedPreviewDoc.id
+                        ? 'bg-indigo-950 text-indigo-300 border border-indigo-500/30 cursor-wait'
+                        : 'bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white shadow-indigo-600/30'
+                    }`}
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Forzar Lectura con IA (OCR)</span>
+                    {ocrLoadingState.activeDocId === selectedPreviewDoc.id ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                        <span>Extrayendo ({ocrLoadingState.percentage}%)...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>{selectedPreviewDoc.ocrApplied ? 'Re-escanear con IA (OCR)' : 'Forzar Lectura con IA (OCR)'}</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
 
+              {/* Barra de Progreso Dinámica con Porcentaje Reactivo */}
+              {ocrLoadingState.activeDocId === selectedPreviewDoc.id && (
+                <div className="w-full bg-slate-950 border border-indigo-500/30 rounded-2xl p-3.5 space-y-2.5 shadow-2xl animate-in fade-in">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-indigo-300 font-semibold min-w-0">
+                      <Loader2 className="w-4 h-4 animate-spin text-indigo-400 shrink-0" />
+                      <span className="truncate">{ocrLoadingState.message}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 font-mono font-bold">
+                      <span className="text-slate-400 text-[11px]">{ocrLoadingState.progressText}</span>
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs">
+                        {ocrLoadingState.percentage}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Barra de progreso interactiva con ancho reactivo */}
+                  <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                    <div 
+                      className="bg-gradient-to-r from-indigo-500 via-indigo-400 to-emerald-400 h-full rounded-full transition-all duration-500 ease-out shadow-lg shadow-indigo-500/20"
+                      style={{ width: `${Math.max(5, ocrLoadingState.percentage)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Banner informativo para documentos escaneados */}
-              {(selectedPreviewDoc.isScanned || selectedPreviewDoc.needsOCR) && !selectedPreviewDoc.ocrApplied && (
+              {(selectedPreviewDoc.isScanned || selectedPreviewDoc.needsOCR) && !selectedPreviewDoc.ocrApplied && !ocrLoadingState.activeDocId && (
                 <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-200 leading-relaxed">
                   <ScanLine className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
