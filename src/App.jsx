@@ -637,6 +637,8 @@ export default function App() {
                   syncActiveAuditToStorage({ evidencias: evList });
                 }}
                 onNextStep={() => setStep(3)}
+                apiConfig={apiConfig}
+                onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
               />
             )}
 

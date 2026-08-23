@@ -55,7 +55,6 @@ async function parsePDF(file) {
   } catch (err1) {
     console.warn('Reintentando carga de PDF con configuración alternativa:', err1);
     try {
-      // Reintento con worker alternativo unpkg si cdnjs tuvo problemas de red
       if (pdfjsLib.GlobalWorkerOptions) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version || '4.10.38'}/build/pdf.worker.min.mjs`;
       }
@@ -66,13 +65,16 @@ async function parsePDF(file) {
       pdf = await loadingTask.promise;
     } catch (err2) {
       console.warn('PDF.js falló, usando extractor de texto binario/stream de respaldo:', err2);
-      return extractTextFromPDFBuffer(uint8Data, file);
+      const streamRes = extractTextFromPDFBuffer(uint8Data, file);
+      streamRes.rawFile = file;
+      return streamRes;
     }
   }
 
   const numPages = pdf.numPages;
   const contenido = [];
   const seccionesSet = new Set();
+  let totalCharsExtracted = 0;
 
   for (let i = 1; i <= numPages; i++) {
     try {
@@ -81,6 +83,7 @@ async function parsePDF(file) {
       const pageText = textContent.items.map(item => item.str || '').join(' ').trim();
 
       if (pageText && pageText.length > 5) {
+        totalCharsExtracted += pageText.length;
         const lines = pageText.split('\n').filter(l => l.trim().length > 0);
         let detectedSection = `Página ${i}`;
         for (const line of lines.slice(0, 3)) {
@@ -103,10 +106,13 @@ async function parsePDF(file) {
     }
   }
 
-  if (contenido.length === 0) {
-    // Si no hubo texto vía PDF.js (por ejemplo PDF escaneado o sin capa vectorial directa)
+  // Detectar si es un PDF escaneado (sin capa de texto directa o con texto casi nulo)
+  const isLikelyScanned = contenido.length === 0 || totalCharsExtracted < (numPages * 20);
+
+  if (isLikelyScanned) {
     const streamExtraction = extractTextFromPDFBuffer(uint8Data, file);
-    if (streamExtraction.contenido && streamExtraction.contenido[0]?.texto?.length > 30) {
+    if (streamExtraction.contenido && streamExtraction.contenido[0]?.texto?.length > 80) {
+      streamExtraction.rawFile = file;
       return streamExtraction;
     }
 
@@ -116,11 +122,14 @@ async function parsePDF(file) {
       tipo: 'PDF',
       paginas: numPages,
       tamanio: formatBytes(file.size),
-      secciones: ['Documento PDF'],
+      secciones: ['Documento Escaneado / OCR Pendiente'],
+      isScanned: true,
+      needsOCR: true,
+      rawFile: file,
       contenido: [{
-        seccion: 'Contenido del Documento',
+        seccion: 'Escaneo Pendiente de OCR',
         pagina: `1/${numPages}`,
-        texto: `Documento PDF procesado: ${file.name} (${numPages} páginas, ${formatBytes(file.size)}). Contenido listo para evaluación por la IA.`
+        texto: `Documento PDF escaneado o basado en imágenes: ${file.name} (${numPages} páginas, ${formatBytes(file.size)}). No contiene capa de texto vectorial directa. Utilice la función "Forzar Lectura con IA (OCR)" para transcribir su contenido.`
       }]
     };
   }
@@ -132,20 +141,20 @@ async function parsePDF(file) {
     paginas: numPages,
     tamanio: formatBytes(file.size),
     secciones: Array.from(seccionesSet),
+    isScanned: false,
+    rawFile: file,
     contenido
   };
 }
 
 /**
  * Extractor de respaldo que analiza los streams de texto en el binario del PDF
- * evitando mostrar etiquetas crudas como %PDF-1.7, obj, stream, etc.
  */
 function extractTextFromPDFBuffer(uint8Data, file) {
   try {
     const decoder = new TextDecoder('latin1');
     const rawString = decoder.decode(uint8Data);
 
-    // Extraer texto entre paréntesis dentro de bloques BT ... ET o Tj / TJ
     const textPieces = [];
     const tjRegex = /\(([^)]+)\)\s*Tj/g;
     let match;
@@ -155,7 +164,6 @@ function extractTextFromPDFBuffer(uint8Data, file) {
       }
     }
 
-    // Si encontramos cadenas Tj
     if (textPieces.length > 5) {
       const fullText = cleanExtractedText(textPieces.join(' '));
       return {
@@ -165,6 +173,8 @@ function extractTextFromPDFBuffer(uint8Data, file) {
         paginas: 1,
         tamanio: formatBytes(file.size),
         secciones: ['Contenido Extraído'],
+        isScanned: false,
+        rawFile: file,
         contenido: [{
           seccion: 'Texto del Procedimiento / Registro',
           pagina: '1/1',
@@ -183,8 +193,11 @@ function extractTextFromPDFBuffer(uint8Data, file) {
     paginas: 1,
     tamanio: formatBytes(file.size),
     secciones: ['Documento PDF'],
+    isScanned: true,
+    needsOCR: true,
+    rawFile: file,
     contenido: [{
-      seccion: 'Documento Registrado',
+      seccion: 'Documento Escaneado',
       pagina: '1/1',
       texto: `Documento PDF validado: ${file.name}. Tamaño: ${formatBytes(file.size)}.`
     }]
@@ -194,8 +207,8 @@ function extractTextFromPDFBuffer(uint8Data, file) {
 function cleanExtractedText(text) {
   if (!text) return '';
   return text
-    .replace(/\\([()\\])/g, '$1') // Desescapar parentesis
-    .replace(/\s+/g, ' ') // Normalizar espacios
+    .replace(/\\([()\\])/g, '$1')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -237,6 +250,7 @@ async function parseDOCX(file) {
     paginas: Math.max(1, currentPage - 1),
     tamanio: formatBytes(file.size),
     secciones: Array.from(seccionesSet).length > 0 ? Array.from(seccionesSet) : ['General'],
+    rawFile: file,
     contenido
   };
 }
@@ -272,6 +286,7 @@ async function parseExcel(file) {
     paginas: workbook.SheetNames.length,
     tamanio: formatBytes(file.size),
     secciones,
+    rawFile: file,
     contenido
   };
 }
@@ -290,6 +305,7 @@ async function parseCSV(file) {
     paginas: 1,
     tamanio: formatBytes(file.size),
     secciones: ['Datos CSV'],
+    rawFile: file,
     contenido: [
       {
         seccion: 'Tabla de Datos CSV',
@@ -308,12 +324,15 @@ async function parseImage(file) {
     tipo: 'Imagen/OCR',
     paginas: 1,
     tamanio: formatBytes(file.size),
-    secciones: ['Escaneo OCR'],
+    secciones: ['Escaneo OCR Pendiente'],
+    isScanned: true,
+    needsOCR: true,
+    rawFile: file,
     contenido: [
       {
         seccion: 'Reconocimiento de Imagen (OCR)',
         pagina: '1/1',
-        texto: `[Evidencia Fotográfica / Escáner procesado por OCR]: ${file.name}`
+        texto: `[Evidencia Fotográfica / Escáner (${file.name})]. Requiere procesamiento OCR con IA para transcribir su texto.`
       }
     ]
   };
@@ -328,6 +347,7 @@ async function parseText(file) {
     paginas: 1,
     tamanio: formatBytes(file.size),
     secciones: ['Documento Texto'],
+    rawFile: file,
     contenido: [
       {
         seccion: 'Texto plano',
@@ -349,10 +369,13 @@ async function fallbackTextParse(file, err) {
       paginas: 1,
       tamanio: formatBytes(file.size),
       secciones: ['Documento PDF'],
+      isScanned: true,
+      needsOCR: true,
+      rawFile: file,
       contenido: [{
         seccion: 'Documento PDF',
         pagina: '1/1',
-        texto: `Documento PDF procesado para análisis de conformidad: ${file.name}.`
+        texto: `Documento PDF procesado para análisis: ${file.name}. Utilice "Forzar Lectura con IA" para extraer su contenido.`
       }]
     };
   }
@@ -367,6 +390,7 @@ async function fallbackTextParse(file, err) {
         paginas: 1,
         tamanio: formatBytes(file.size),
         secciones: ['Contenido Texto'],
+        rawFile: file,
         contenido: [{
           seccion: 'Sección Principal',
           pagina: '1/1',
@@ -385,6 +409,7 @@ async function fallbackTextParse(file, err) {
     paginas: 1,
     tamanio: formatBytes(file.size),
     secciones: ['Documento completo'],
+    rawFile: file,
     contenido: [{
       seccion: 'Sección principal',
       pagina: 'Página 1',
