@@ -18,7 +18,10 @@ import {
   ScanLine,
   Sliders,
   FileText,
-  HelpCircle
+  HelpCircle,
+  Maximize2,
+  Minimize2,
+  Search
 } from 'lucide-react';
 import { parseDocument } from '../engine/textExtractor';
 import { performAIOcrExtraction, parsePageRange } from '../engine/ocrService';
@@ -170,6 +173,8 @@ export default function EvidenciasSection({
     percentage: 0
   });
   const [copiedDocId, setCopiedDocId] = useState(null);
+  const [isExpandedModalOpen, setIsExpandedModalOpen] = useState(false);
+  const [expandedSearchQuery, setExpandedSearchQuery] = useState('');
 
   // Estado para diálogo de doble confirmación
   const [confirmDialog, setConfirmDialog] = useState({
@@ -552,9 +557,21 @@ export default function EvidenciasSection({
               <h3 className="text-xs font-semibold text-white">Inspección de Contenido y Secciones</h3>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {selectedPreviewDoc && (
                 <>
+                  <button
+                    onClick={() => {
+                      setExpandedSearchQuery('');
+                      setIsExpandedModalOpen(true);
+                    }}
+                    className="px-2.5 py-1.5 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-indigo-600/30 border border-slate-700 hover:border-indigo-500/40 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                    title="Ampliar en ventana completa"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="text-[11px] font-semibold">Ampliar</span>
+                  </button>
+
                   <button
                     onClick={() => handleCopyExtractedText(selectedPreviewDoc)}
                     className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg text-xs flex items-center gap-1 transition-all"
@@ -861,6 +878,193 @@ export default function EvidenciasSection({
                     : `Iniciar en ${pageModalState.doc.paginas || 1} páginas`
                   }
                 </span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Inspección Ampliada a Pantalla Completa */}
+      {isExpandedModalOpen && selectedPreviewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95">
+            
+            {/* Header del Modal */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 bg-slate-950 border-b border-slate-800">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-bold text-white truncate max-w-md">
+                      {selectedPreviewDoc.nombre}
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-[11px] font-mono">
+                      {selectedPreviewDoc.tipo}
+                    </span>
+                    {selectedPreviewDoc.ocrApplied && (
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10.5px] font-semibold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                        <span>Visión IA</span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {selectedPreviewDoc.paginas || selectedPreviewDoc.contenido?.length || 1} página(s) • {selectedPreviewDoc.contenido?.length || 0} fragmento(s) indexado(s)
+                  </p>
+                </div>
+              </div>
+
+              {/* Botones de acción del Header */}
+              <div className="flex items-center gap-2">
+                {/* Buscador en tiempo real dentro del documento */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={expandedSearchQuery}
+                    onChange={(e) => setExpandedSearchQuery(e.target.value)}
+                    placeholder="Buscar en el documento..."
+                    className="pl-8 pr-6 py-1.5 bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-xl text-xs text-slate-200 placeholder-slate-500 w-44 sm:w-60 outline-none transition-all"
+                  />
+                  {expandedSearchQuery && (
+                    <button
+                      onClick={() => setExpandedSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleCopyExtractedText(selectedPreviewDoc)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-all shadow-sm active:scale-95"
+                  title="Copiar todo el contenido"
+                >
+                  {copiedDocId === selectedPreviewDoc.id ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  <span>{copiedDocId === selectedPreviewDoc.id ? '¡Copiado!' : 'Copiar'}</span>
+                </button>
+
+                {(selectedPreviewDoc.paginas > 1 || (selectedPreviewDoc.contenido && selectedPreviewDoc.contenido.length > 1)) && (
+                  <button
+                    type="button"
+                    onClick={() => handleTriggerAIOcr(selectedPreviewDoc, true)}
+                    disabled={ocrLoadingState.activeDocId === selectedPreviewDoc.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-all active:scale-95 shadow-sm"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Elegir Hojas</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleTriggerAIOcr(selectedPreviewDoc)}
+                  disabled={ocrLoadingState.activeDocId === selectedPreviewDoc.id}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white shadow-md transition-all active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{selectedPreviewDoc.ocrApplied ? 'Re-escanear' : 'Leer con IA'}</span>
+                </button>
+
+                <button
+                  onClick={() => setIsExpandedModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors ml-1"
+                  title="Cerrar ventana ampliada"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Barra de Progreso OCR dentro del modal si está corriendo */}
+            {ocrLoadingState.activeDocId === selectedPreviewDoc.id && (
+              <div className="px-6 py-3 bg-slate-950/90 border-b border-indigo-500/30 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-indigo-300 font-semibold">
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                    <span>{ocrLoadingState.message}</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-mono font-bold">
+                    {ocrLoadingState.percentage}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                  <div 
+                    className="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${ocrLoadingState.percentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Contenido Ampliado con Scroll Cómodo */}
+            <div className="flex-1 bg-slate-950/60 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+              {(() => {
+                const items = selectedPreviewDoc.contenido || [];
+                const filtered = expandedSearchQuery.trim()
+                  ? items.filter(it => 
+                      (it.texto && it.texto.toLowerCase().includes(expandedSearchQuery.toLowerCase())) ||
+                      (it.seccion && it.seccion.toLowerCase().includes(expandedSearchQuery.toLowerCase())) ||
+                      (it.pagina && String(it.pagina).toLowerCase().includes(expandedSearchQuery.toLowerCase()))
+                    )
+                  : items;
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-center py-16 text-slate-500 space-y-2">
+                      <Search className="w-8 h-8 mx-auto text-slate-600 opacity-50" />
+                      <p className="text-sm">No se encontraron fragmentos que coincidan con "{expandedSearchQuery}"</p>
+                    </div>
+                  );
+                }
+
+                return filtered.map((item, idx) => (
+                  <div 
+                    key={idx} 
+                    className="border border-slate-800 hover:border-slate-700/80 rounded-2xl bg-slate-900/90 p-5 shadow-lg space-y-3 transition-all"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-xs border-b border-slate-800/80 pb-3">
+                      <span className="font-bold text-amber-400 flex items-center gap-2 text-[13px]">
+                        <span>📌 {item.seccion || `Página ${idx + 1}`}</span>
+                        {item.isOcr && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20 font-sans font-medium flex items-center gap-1">
+                            <Sparkles className="w-2.5 h-2.5 text-purple-400" />
+                            <span>Extraído con Visión IA</span>
+                          </span>
+                        )}
+                      </span>
+                      {item.pagina && (
+                        <span className="text-[11px] text-slate-400 font-mono bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                          Pág. {item.pagina}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <RenderExtractedContent item={item} docType={selectedPreviewDoc.tipo} />
+                  </div>
+                ));
+              })()}
+            </div>
+
+            {/* Footer del Modal */}
+            <div className="flex items-center justify-between px-6 py-3 bg-slate-950 border-t border-slate-800 text-xs text-slate-400">
+              <span className="font-mono">
+                Mostrando {selectedPreviewDoc.contenido?.length || 0} secciones indexadas
+              </span>
+              <button
+                onClick={() => setIsExpandedModalOpen(false)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium transition-all"
+              >
+                Cerrar
               </button>
             </div>
 
