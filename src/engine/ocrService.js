@@ -445,32 +445,36 @@ async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
     if (!candidateModels.includes(m)) candidateModels.push(m);
   });
 
-  const systemPrompt = `Eres un Auditor Líder y Especialista en Gestión de Calidad ISO/IEC 17025 e ISO 9001.
-Tu misión es entregar una síntesis limpia, directa, ejecutiva y estructurada de la página o imagen.
+  const systemPrompt = `Eres un especialista en extracción estructurada y fiel de documentos para auditorías.
+Tu misión es extraer y transcribir fielmente lo que está presente en la página o imagen, en ESPAÑOL, sin agregar interpretaciones teóricas ni ensayos adicionales.
 REGLAS OBLIGATORIAS:
 - RESPONDE EXCLUSIVAMENTE EN ESPAÑOL.
-- NUNCA expliques tus pensamientos internos ni emitas borradores.
-- NUNCA menciones 'Role:', 'Task:', 'Drafting:', etc.
-- NUNCA extraigas tablas de encabezados (logos, código MCL-001, versión, fechas, número de página) ni marcas de agua.
-- Entrega directamente la síntesis del diagrama y el texto sustantivo en español.`;
+- Limítate a mostrar con fidelidad lo que contiene el documento.
+- NUNCA agregues párrafos de interpretación o teoría de auditoría inventada.
+- Omite tablas de encabezados repetitivas (logos, código MCL-001, versión, fechas, número de página) y marcas de agua.
+- Transcribe con fidelidad el texto sustantivo y la estructura visible del gráfico.`;
 
-  const userPrompt = `Analiza esta imagen y entrega ÚNICAMENTE en ESPAÑOL la síntesis ejecutiva y estructurada:
+  const userPrompt = `Extrae fielmente el contenido de esta imagen en ESPAÑOL, limitándote a lo que está en el documento:
 
 1. Si la imagen contiene un MAPA DE PROCESOS o DIAGRAMA:
-- Breve párrafo inicial en español explicando qué es la imagen y su propósito en la organización.
-- Desglose estructurado:
-  * **Entradas (Izquierda)**: Necesidades del mercado y requisitos del servicio.
-  * **Procesos Estratégicos (Arriba)**: Toma de decisiones y planeación (Dirección, Planeación, etc.).
-  * **Procesos Operativos / Clave (Centro)**: Ciclo central de negocio del laboratorio (Licitaciones, Muestreo, Análisis, etc.).
-  * **Procesos de Apoyo / Soporte (Abajo)**: Procesos que mantienen la operación (Compras, Calidad, Metrología, Administración).
-  * **Salidas (Derecha)**: Servicios finales prestados y satisfacción del cliente.
-- Breve párrafo de relevancia para la auditoría ISO/IEC 17025.
+- Breve descripción inicial del gráfico y su propósito según lo que indica el documento.
+- **Desglose estructurado:**
+  * **Entradas (Izquierda):** [Elementos visibles de entrada]
+  * **Procesos Estratégicos (Arriba):** [Elementos visibles de dirección/planeación]
+  * **Procesos Operativos / Clave (Centro):** [Elementos visibles misionales/técnicos]
+  * **Procesos de Apoyo / Soporte (Abajo):** [Elementos visibles de apoyo]
+  * **Salidas (Derecha):** [Elementos visibles de salida]
+- (NO agregues párrafos de teoría o justificación de auditoría).
 
 2. Si es un ORGANIGRAMA:
-- Breve explicación del organigrama.
-- Desglose estructurado por niveles (Directivo, Asesoría/Control, Gerencia General, Gerencias/Direcciones de Línea).
+- Breve descripción del organigrama.
+- **Desglose estructurado por niveles:**
+  * **Nivel Directivo / Asamblea:** [Cargos visibles]
+  * **Órganos de Asesoría / Control:** [Cargos visibles]
+  * **Gerencia General:** [Cargos visibles]
+  * **Gerencias / Direcciones y Dependencias:** [Cargos y áreas visibles]
 
-3. Si hay TEXTO TÉCNICO en el cuerpo:
+3. Si hay TEXTO TÉCNICO o PÁRRAFOS en el cuerpo:
 - Transcribe íntegramente las frases del cuerpo (omitiendo encabezados y pies de página).`;
 
   const requestBody = {
@@ -549,22 +553,20 @@ async function ocrPageWithOpenAI(pageImg, apiKey, preferredModel) {
   const cleanKey = (apiKey || '').trim();
   const model = preferredModel || 'gpt-4o-mini';
 
-  const systemPrompt = `Eres un Auditor y Especialista en Gestión de Calidad ISO/IEC 17025 e ISO 9001.
-Entrega directamente la síntesis ejecutiva del diagrama y el texto del documento.
-NUNCA extraigas tablas de encabezados (logos, código MCL-001, versión, fechas, número de página) ni marcas de agua.
-NUNCA emitas pasos de razonamiento interno, ni notas de rol.`;
+  const systemPrompt = `Eres un especialista en extracción estructurada y fiel de documentos para auditorías.
+Tu misión es extraer y transcribir fielmente lo que está presente en la página o imagen, en ESPAÑOL, sin agregar interpretaciones teóricas ni ensayos adicionales.
+Omite tablas de encabezados repetitivas (logos, código MCL-001, versión, fechas, número de página) y marcas de agua.`;
 
-  const userPrompt = `Analiza esta imagen y entrega únicamente la síntesis ejecutiva y estructurada:
+  const userPrompt = `Extrae fielmente el contenido de esta imagen en ESPAÑOL, limitándote a lo que está en el documento:
 1. Si es MAPA DE PROCESOS o DIAGRAMA:
-- Breve párrafo inicial explicando qué es la imagen y su propósito.
-- Desglose estructurado:
-  * **Entradas (Izquierda)**: Necesidades y requisitos.
-  * **Procesos Estratégicos (Arriba)**: Dirección y planeación.
-  * **Procesos Operativos / Clave (Centro)**: Licitaciones, Muestreo, Análisis, etc.
-  * **Procesos de Apoyo / Soporte (Abajo)**: Compras, Calidad, Metrología, Administración.
-  * **Salidas (Derecha)**: Servicio y satisfacción del cliente.
-- Breve párrafo de relevancia para auditoría ISO/IEC 17025.
-2. Si es ORGANIGRAMA: Desglose claro por niveles jerárquicos.
+- Breve descripción del gráfico.
+- **Desglose estructurado:**
+  * **Entradas (Izquierda):** [Elementos visibles]
+  * **Procesos Estratégicos (Arriba):** [Elementos visibles]
+  * **Procesos Operativos / Clave (Centro):** [Elementos visibles]
+  * **Procesos de Apoyo / Soporte (Abajo):** [Elementos visibles]
+  * **Salidas (Derecha):** [Elementos visibles]
+2. Si es ORGANIGRAMA: Desglose por niveles jerárquicos visibles.
 3. Si hay TEXTO TÉCNICO en el cuerpo: Transcríbelo íntegramente (sin encabezados ni pies de página).`;
 
   const requestBody = {
