@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { parseDocument } from '../engine/textExtractor';
 import { performAIOcrExtraction } from '../engine/ocrService';
+import { setCachedFile, getCachedFile, isTrueBlobOrFile } from '../engine/fileCache';
 import ConfirmDialogModal from './ConfirmDialogModal';
 
 function RenderExtractedContent({ item, docType }) {
@@ -144,6 +145,7 @@ export default function EvidenciasSection({
       const parsedDocs = [];
       for (const file of files) {
         const docData = await parseDocument(file);
+        setCachedFile(docData.id, file);
         parsedDocs.push(docData);
       }
       const updatedList = [...evidencias, ...parsedDocs];
@@ -196,8 +198,10 @@ export default function EvidenciasSection({
       return;
     }
 
-    // Si no tenemos el archivo en memoria (por ejemplo sesión previa recargada)
-    if (!doc.rawFile && !doc._file) {
+    // Verificar si el archivo está en memoria o en fileCache
+    const hasValidBlob = isTrueBlobOrFile(doc.rawFile) || isTrueBlobOrFile(doc._file) || getCachedFile(doc.id);
+
+    if (!hasValidBlob) {
       setPendingOcrDoc(doc);
       if (reuploadDocRef.current) {
         reuploadDocRef.current.click();
@@ -211,6 +215,8 @@ export default function EvidenciasSection({
   const handleReuploadForOcr = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !pendingOcrDoc) return;
+
+    setCachedFile(pendingOcrDoc.id, file);
 
     const docWithFile = {
       ...pendingOcrDoc,

@@ -1,4 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import { getCachedFile, isTrueBlobOrFile } from './fileCache';
 
 // Configurar worker de PDF.js para renderizado de canvas
 if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
@@ -14,8 +15,26 @@ if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
  * Renderiza las páginas de un archivo PDF a imágenes JPEG en Base64
  */
 export async function renderPdfPagesToImages(fileOrBlob, maxPages = 20) {
-  const arrayBuffer = await fileOrBlob.arrayBuffer();
-  const uint8Data = new Uint8Array(arrayBuffer);
+  let uint8Data;
+
+  if (fileOrBlob instanceof Uint8Array) {
+    uint8Data = fileOrBlob;
+  } else if (fileOrBlob instanceof ArrayBuffer) {
+    uint8Data = new Uint8Array(fileOrBlob);
+  } else if (typeof fileOrBlob?.arrayBuffer === 'function') {
+    const arrayBuffer = await fileOrBlob.arrayBuffer();
+    uint8Data = new Uint8Array(arrayBuffer);
+  } else if (typeof fileOrBlob === 'string' && fileOrBlob.startsWith('data:')) {
+    // Si viene como base64 data URI
+    const base64 = fileOrBlob.split(',')[1] || fileOrBlob;
+    const binaryStr = atob(base64);
+    uint8Data = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      uint8Data[i] = binaryStr.charCodeAt(i);
+    }
+  } else {
+    throw new Error('El archivo PDF no es un Blob, File o ArrayBuffer válido.');
+  }
 
   const loadingTask = pdfjsLib.getDocument({
     data: uint8Data,
@@ -63,12 +82,24 @@ export async function renderPdfPagesToImages(fileOrBlob, maxPages = 20) {
 /**
  * Convierte un archivo de imagen (PNG, JPG, WEBP, BMP) a Base64
  */
-export async function renderImageFileToBase64(file) {
+export async function renderImageFileToBase64(fileOrBlob) {
+  if (typeof fileOrBlob === 'string' && fileOrBlob.startsWith('data:')) {
+    const mimeType = fileOrBlob.includes('png') ? 'image/png' : 'image/jpeg';
+    const base64Data = fileOrBlob.split(',')[1];
+    return [{
+      pageNumber: 1,
+      totalPages: 1,
+      mimeType,
+      base64Data,
+      dataUrl: fileOrBlob
+    }];
+  }
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
-      const mimeType = file.type || 'image/jpeg';
+      const mimeType = fileOrBlob.type || 'image/jpeg';
       const base64Data = dataUrl.split(',')[1];
       resolve([{
         pageNumber: 1,
@@ -79,7 +110,7 @@ export async function renderImageFileToBase64(file) {
       }]);
     };
     reader.onerror = reject;
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileOrBlob);
   });
 }
 
@@ -93,9 +124,18 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress) {
     throw new Error('API_KEY_REQUIRED');
   }
 
-  const rawFile = doc.rawFile || doc._file;
+  // Buscar archivo en memoria, en cache o en propiedades del doc
+  let rawFile = null;
+  if (isTrueBlobOrFile(doc.rawFile)) {
+    rawFile = doc.rawFile;
+  } else if (isTrueBlobOrFile(doc._file)) {
+    rawFile = doc._file;
+  } else if (getCachedFile(doc.id)) {
+    rawFile = getCachedFile(doc.id);
+  }
+
   if (!rawFile) {
-    throw new Error('El archivo original no está en memoria para ser re-escaneado. Por favor, vuelva a cargar el documento.');
+    throw new Error('FILE_NOT_IN_MEMORY');
   }
 
   const isPdf = doc.nombre.toLowerCase().endsWith('.pdf') || doc.tipo === 'PDF';
@@ -167,6 +207,7 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress) {
     secciones: Array.from(seccionesSet).length > 0 ? Array.from(seccionesSet) : ['Documento Transcrito por IA'],
     contenido: newContenido,
     isScanned: false,
+    needsOCR: false,
     ocrApplied: true,
     ocrProvider: provider,
     ocrDate: new Date().toLocaleDateString()
