@@ -375,11 +375,14 @@ Analiza minuciosamente esta página o imagen y genera una extracción estructura
 
 1. SI DETECTAS DIAGRAMAS, MAPAS DE PROCESOS, ORGANIGRAMAS, FLUJOGRAMAS O ESQUEMAS:
    - Identifica el Título y Tipo de Gráfico (ej. "Organigrama Estructural", "Mapa de Procesos Técnicos / SIPOC", "Flujograma Operativo").
-   - Detalla la Jerarquía y Conexiones:
-     * Para Organigramas: Nivel Directivo / Asamblea -> Órganos de Control / Revisoría / Cumplimiento -> Gerencia General -> Gerencias de Línea (Técnica, HSEQ, RRHH, etc.) -> Coordinaciones y Cargos Operativos.
-     * Para Mapas de Procesos: Clasifica claramente en Procesos Estratégicos, Procesos Misionales/Operativos (Licitación, Muestreo, Ensayo, Calibración, Emisión de Resultados), Procesos de Apoyo (Compras, Metrología, Calidad, TI) y su relación con Entradas (Necesidades/Requisitos del cliente) y Salidas (Satisfacción, Servicios).
-   - Proporciona un [ANÁLISIS FUNCIONAL ISO/IEC 17025] explicando la relevancia del gráfico (ej: cumplimiento del numeral 5.1/5.5 Estructura y Autoridad, numeral 4.1 Imparcialidad, numeral 8.1 Sistema de Gestión).
-   - Genera la estructura en sintaxis de diagrama Mermaid (\`\`\`mermaid ... \`\`\`) para visualización interactiva.
+   - Detalla la Jerarquía y Conexiones en texto claro:
+     * Para Organigramas: Nivel Directivo / Asamblea -> Órganos de Control -> Gerencia General -> Gerencias de Línea -> Coordinaciones y Cargos.
+     * Para Mapas de Procesos: Clasifica en Procesos Estratégicos, Misionales/Operativos y de Apoyo, relacionando Entradas y Salidas.
+   - Proporciona un [ANÁLISIS FUNCIONAL ISO/IEC 17025] explicando la relevancia del gráfico para la norma (ej: Numeral 5.1/5.5 Estructura y Autoridad, Numeral 4.1 Imparcialidad, Numeral 8.1 Sistema de Gestión).
+   - Genera el diagrama Mermaid (\`\`\`mermaid ... \`\`\`) aplicando ESTAS REGLAS ESTRICTAS DE DIAGRAMACIÓN LIMPIA:
+     * Para Mapas de Procesos: Usa SIEMPRE \`flowchart LR\` con 3 subgrafos ordenados: \`subgraph ENTRADAS["📥 ENTRADAS"]\`, \`subgraph PROCESOS["⚙️ PROCESOS"]\` (con Estratégicos, Misionales y Apoyo) y \`subgraph SALIDAS["📤 SALIDAS"]\`. Conecta las entradas hacia los misionales, estratégicos hacia misionales y misionales hacia salidas sin cruzar flechas diagonales desordenadas.
+     * Para Organigramas: Usa SIEMPRE \`flowchart TD\` con jerarquía limpia de arriba hacia abajo (Asamblea -> Gerencia General -> Direcciones/Gerencias -> Cargos).
+     * Usa identificadores limpios y textos concisos entre corchetes y comillas (ej. N1["Gestión Gerencial"]).
 
 2. SI DETECTAS TEXTO CONVENCIONAL, TABLAS, FIRMAS O FORMULARIOS:
    - Transcribe íntegramente todo el texto respetando títulos, numerales, cláusulas, listas y notas.
@@ -387,7 +390,7 @@ Analiza minuciosamente esta página o imagen y genera una extracción estructura
    - Registra nombres, cargos, cédulas, firmas y fechas.
 
 3. FORMA DE RESPUESTA:
-   - Entrega una transcripción clara, limpia y estructurada combinando el texto de la página y el análisis semántico de los diagramas.`;
+   - Entrega una transcripción limpia y estructurada combinando el análisis del texto y los diagramas.`;
 
   const requestBody = {
     contents: [
@@ -464,7 +467,9 @@ Analiza minuciosamente esta página o imagen y genera una extracción estructura
    - Identifica Título y Tipo de Gráfico.
    - Detalla Jerarquía y Conexiones (quién reporta a quién, entradas -> procesos -> salidas).
    - Genera un [ANÁLISIS FUNCIONAL ISO/IEC 17025] explicando su relevancia para la norma (ej: Numeral 5.1/5.5 Estructura y Autoridad, Numeral 4.1 Imparcialidad, Numeral 8.1 Sistema de Gestión).
-   - Genera diagrama Mermaid (\`\`\`mermaid ... \`\`\`).
+   - Genera el diagrama Mermaid (\`\`\`mermaid ... \`\`\`) aplicando REGLAS DE DIAGRAMACIÓN LIMPIA:
+     * Para Mapas de Procesos: Usa SIEMPRE \`flowchart LR\` con 3 subgrafos ordenados (\`subgraph ENTRADAS\`, \`subgraph PROCESOS\` con Estratégicos, Misionales y Apoyo, y \`subgraph SALIDAS\`). Conecta en bloques limpios sin cruzar flechas diagonales desordenadas.
+     * Para Organigramas: Usa SIEMPRE \`flowchart TD\` con jerarquía limpia de arriba hacia abajo (Asamblea -> Gerencia General -> Direcciones/Gerencias -> Cargos).
 2. SI DETECTAS TEXTO O TABLAS:
    - Transcribe íntegramente respetando cláusulas, numerales, tablas y firmas.
 3. Responde de forma limpia y estructurada.`;
