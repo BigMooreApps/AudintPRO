@@ -161,7 +161,11 @@ Debes responder OBLIGATORIAMENTE en formato JSON con esta estructura exacta:
 
       if (response.ok) {
         const data = await response.json();
-        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const candidate = data.candidates?.[0];
+        const parts = candidate?.content?.parts || [];
+        const nonThoughtParts = parts.filter(p => !p.thought);
+        const selectedParts = nonThoughtParts.length > 0 ? nonThoughtParts : parts;
+        const textResponse = selectedParts.map(p => p.text || '').join('\n').trim();
 
         if (textResponse) {
           return parseGeminiResponse(textResponse, chunkNumerales);
@@ -204,7 +208,11 @@ Debes responder OBLIGATORIAMENTE en formato JSON con esta estructura exacta:
 
     if (fallbackRes.ok) {
       const data = await fallbackRes.json();
-      const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const candidate = data.candidates?.[0];
+      const parts = candidate?.content?.parts || [];
+      const nonThoughtParts = parts.filter(p => !p.thought);
+      const selectedParts = nonThoughtParts.length > 0 ? nonThoughtParts : parts;
+      const textResponse = selectedParts.map(p => p.text || '').join('\n').trim();
       if (textResponse) {
         return parseGeminiResponse(textResponse, chunkNumerales);
       }

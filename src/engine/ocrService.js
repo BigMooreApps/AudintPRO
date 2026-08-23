@@ -445,27 +445,30 @@ async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
     if (!candidateModels.includes(m)) candidateModels.push(m);
   });
 
-  const systemPrompt = `Eres un Auditor y Especialista en Gestión de Calidad ISO/IEC 17025 e ISO 9001.
-Tu misión es entregar una síntesis limpia, directa, ejecutiva y humana de la página o imagen.
-NUNCA expliques tus pasos de pensamiento, ni menciones 'Role:', 'Task:', 'Drafting:', etc.
-NUNCA extraigas tablas de encabezados (logos, código MCL-001, versión, fechas, número de página) ni marcas de agua.
-Entrega directamente la descripción del diagrama y el texto sustantivo.`;
+  const systemPrompt = `Eres un Auditor Líder y Especialista en Gestión de Calidad ISO/IEC 17025 e ISO 9001.
+Tu misión es entregar una síntesis limpia, directa, ejecutiva y estructurada de la página o imagen.
+REGLAS OBLIGATORIAS:
+- RESPONDE EXCLUSIVAMENTE EN ESPAÑOL.
+- NUNCA expliques tus pensamientos internos ni emitas borradores.
+- NUNCA menciones 'Role:', 'Task:', 'Drafting:', etc.
+- NUNCA extraigas tablas de encabezados (logos, código MCL-001, versión, fechas, número de página) ni marcas de agua.
+- Entrega directamente la síntesis del diagrama y el texto sustantivo en español.`;
 
-  const userPrompt = `Analiza esta imagen y entrega únicamente la síntesis ejecutiva y estructurada:
+  const userPrompt = `Analiza esta imagen y entrega ÚNICAMENTE en ESPAÑOL la síntesis ejecutiva y estructurada:
 
-1. Si es un MAPA DE PROCESOS o DIAGRAMA:
-- Breve párrafo inicial explicando qué es la imagen y su propósito (ej: "Esta imagen es un mapa de procesos diseñado bajo el enfoque de gestión de calidad...").
+1. Si la imagen contiene un MAPA DE PROCESOS o DIAGRAMA:
+- Breve párrafo inicial en español explicando qué es la imagen y su propósito en la organización.
 - Desglose estructurado:
   * **Entradas (Izquierda)**: Necesidades del mercado y requisitos del servicio.
   * **Procesos Estratégicos (Arriba)**: Toma de decisiones y planeación (Dirección, Planeación, etc.).
   * **Procesos Operativos / Clave (Centro)**: Ciclo central de negocio del laboratorio (Licitaciones, Muestreo, Análisis, etc.).
-  * **Procesos de Apoyo / Soporte (Abajo)**: Procesos de soporte (Compras, Calidad, Metrología, Administración).
-  * **Salidas (Derecha)**: Servicios finales y satisfacción del cliente.
+  * **Procesos de Apoyo / Soporte (Abajo)**: Procesos que mantienen la operación (Compras, Calidad, Metrología, Administración).
+  * **Salidas (Derecha)**: Servicios finales prestados y satisfacción del cliente.
 - Breve párrafo de relevancia para la auditoría ISO/IEC 17025.
 
 2. Si es un ORGANIGRAMA:
 - Breve explicación del organigrama.
-- Desglose por niveles (Directivo, Asesoría/Control, Gerencia General, Gerencias/Direcciones de Línea).
+- Desglose estructurado por niveles (Directivo, Asesoría/Control, Gerencia General, Gerencias/Direcciones de Línea).
 
 3. Si hay TEXTO TÉCNICO en el cuerpo:
 - Transcribe íntegramente las frases del cuerpo (omitiendo encabezados y pies de página).`;
@@ -489,7 +492,7 @@ Entrega directamente la descripción del diagrama y el texto sustantivo.`;
       }
     ],
     generationConfig: {
-      temperature: 0.05
+      temperature: 0.1
     }
   };
 
@@ -511,7 +514,12 @@ Entrega directamente la descripción del diagrama y el texto sustantivo.`;
       if (response.ok) {
         const data = await response.json();
         const candidate = data.candidates?.[0];
-        const textPart = candidate?.content?.parts?.[0]?.text;
+        const parts = candidate?.content?.parts || [];
+        // Filtrar cualquier bloque de pensamiento interno (thought: true) de Gemini 2.0
+        const nonThoughtParts = parts.filter(p => !p.thought);
+        const selectedParts = nonThoughtParts.length > 0 ? nonThoughtParts : parts;
+        const textPart = selectedParts.map(p => p.text || '').join('\n').trim();
+
         if (textPart) {
           return cleanExtractedOcrText(textPart);
         }
