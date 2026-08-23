@@ -369,31 +369,38 @@ async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
     if (!candidateModels.includes(m)) candidateModels.push(m);
   });
 
-  const prompt = `Actúa como un Auditor Líder y Especialista en Visión e Inteligencia Artificial para Sistemas de Gestión ISO/IEC 17025 e ISO 9001.
+  const prompt = `Actúa como un Auditor y Especialista en Sistemas de Gestión de Calidad ISO/IEC 17025 e ISO 9001.
 
-Analiza minuciosamente esta página o imagen y genera una extracción limpia, directa y estructurada.
+Analiza de manera clara, natural, ejecutiva y estructurada la página o imagen proporcionada:
 
-REGLAS CRÍTICAS DE EXCLUSIÓN Y FORMATO:
-1. NO EXTRAIGAS NI TRANSCRIBAS ENCABEZADOS NI PIES DE PÁGINA:
-   - Omite tablas de encabezados (logos, nombre de la empresa, código de documento tipo MCL-001, versión, fechas, número de página 11/42, etc.).
+REGLAS DE EXTRACCIÓN Y FORMATO:
+1. NO EXTRAIGAS ENCABEZADOS NI PIES DE PÁGINA:
+   - Omite tablas de encabezados repetitivas (logos, código MCL-001, versión, fechas, número de página 11/42, etc.).
    - Omite marcas de agua (ej. 'DOCUMENTO CONTROLADO').
-   - Omite pies de página repetitivos.
-   - Concéntrate EXCLUSIVAMENTE en el contenido técnico sustantivo del cuerpo y en los diagramas.
+   - Omite pies de página.
 
-2. ENTREGA DIRECTA SIN METADATOS NI PASOS DE PENSAMIENTO:
-   - PROHIBIDO incluir introducciones, notas de rol ("* Role:...", "* Task:..."), requerimientos ("* Specific Requirements..."), o listas de pasos ("* Step 1:...").
-   - Devuelve ÚNICAMENTE el resultado final directamente.
+2. SI LA IMAGEN CONTIENE UN MAPA DE PROCESOS, ORGANIGRAMA O DIAGRAMA:
+   - Inicia con una breve explicación ejecutiva y natural de qué es la imagen y su propósito en la organización (ej: "Esta imagen es un mapa de procesos diseñado bajo el enfoque de gestión de calidad...").
+   - Presenta un desglose claro y elegante de su estructura:
+     * Para Mapas de Procesos:
+       - **Entradas (Izquierda)**: Necesidades del mercado y requisitos del servicio.
+       - **Procesos Estratégicos (Arriba)**: Actividades de toma de decisiones y planeación (Dirección, Planeación, etc.).
+       - **Procesos Operativos / Clave (Centro)**: Ciclo central de negocio del laboratorio (Licitaciones, Muestreo, Análisis, etc.).
+       - **Procesos de Apoyo / Soporte (Abajo)**: Procesos que mantienen la operación (Compras, Calidad, Metrología, Administración).
+       - **Salidas (Derecha)**: Servicios finales prestados y satisfacción del cliente.
+     * Para Organigramas:
+       - **Nivel Directivo / Asamblea**: Máxima instancia de gobierno.
+       - **Órganos de Asesoría / Control**: Revisoría fiscal, oficial de cumplimiento.
+       - **Gerencia General**: Dirección ejecutiva principal.
+       - **Gerencias / Direcciones de Línea**: Detalle de cada área y sus respectivos cargos subordinados.
+   - Añade un breve párrafo conciso sobre su relevancia para la auditoría (numerales clave de ISO/IEC 17025).
 
-3. SI HAY DIAGRAMAS, MAPAS DE PROCESOS U ORGANIGRAMAS:
-   - Título y Tipo de Gráfico.
-   - Jerarquía y Conexiones clave.
-   - [ANÁLISIS FUNCIONAL ISO/IEC 17025] (relevancia técnica y normativa para numerales 4, 5, 6, 7 y 8).
-   - Diagrama Mermaid (\`\`\`mermaid ... \`\`\`) aplicando REGLAS DE DIAGRAMACIÓN LIMPIA:
-     * Para Mapas de Procesos: Usa SIEMPRE \`flowchart LR\` con 3 subgrafos ordenados (\`subgraph ENTRADAS\`, \`subgraph PROCESOS\` con Estratégicos, Misionales y Apoyo, y \`subgraph SALIDAS\`). Conecta en bloques limpios sin cruzar flechas diagonales desordenadas.
-     * Para Organigramas: Usa SIEMPRE \`flowchart TD\` con jerarquía limpia de arriba hacia abajo (Asamblea -> Gerencia General -> Direcciones/Gerencias -> Cargos).
+3. SI LA PÁGINA CONTIENE TEXTO TÉCNICO O PÁRRAFOS DEL CUERPO:
+   - Transcribe íntegramente el texto sustantivo respetando párrafos y numerales.
 
-4. SI HAY TEXTO TÉCNICO, CLÁUSULAS O TABLAS DEL CUERPO:
-   - Transcribe el texto sustantivo respetando párrafos, numerales y listas.`;
+4. ESTILO:
+   - Redacción 100% natural, fluida, ejecutiva y humana.
+   - Cero metadatos mecánicos ("* Role:...", "* Step 1:..."), directo al contenido.`;
 
   const requestBody = {
     contents: [
@@ -463,28 +470,38 @@ async function ocrPageWithOpenAI(pageImg, apiKey, preferredModel) {
   const cleanKey = (apiKey || '').trim();
   const model = preferredModel || 'gpt-4o-mini';
 
-  const prompt = `Actúa como un Auditor Líder y Especialista en Visión e Inteligencia Artificial para Sistemas de Gestión ISO/IEC 17025 e ISO 9001.
+  const prompt = `Actúa como un Auditor y Especialista en Sistemas de Gestión de Calidad ISO/IEC 17025 e ISO 9001.
 
-Analiza minuciosamente esta página o imagen y genera una extracción limpia, directa y estructurada:
+Analiza de manera clara, natural, ejecutiva y estructurada la página o imagen proporcionada:
 
-REGLAS CRÍTICAS DE EXCLUSIÓN Y FORMATO:
-1. NO EXTRAIGAS NI TRANSCRIBAS ENCABEZADOS NI PIES DE PÁGINA:
-   - Omite tablas de encabezados (logos, nombre de la empresa, código MCL-001, versión, fechas, página 11/42, etc.).
+REGLAS DE EXTRACCIÓN Y FORMATO:
+1. NO EXTRAIGAS ENCABEZADOS NI PIES DE PÁGINA:
+   - Omite tablas de encabezados repetitivas (logos, código MCL-001, versión, fechas, número de página 11/42, etc.).
    - Omite marcas de agua (ej. 'DOCUMENTO CONTROLADO').
-   - Omite pies de página repetitivos.
-   - Concéntrate EXCLUSIVAMENTE en el contenido técnico sustantivo del cuerpo y en los diagramas.
+   - Omite pies de página.
 
-2. ENTREGA DIRECTA SIN METADATOS NI PASOS DE PENSAMIENTO:
-   - PROHIBIDO incluir introducciones o notas de rol ("* Role:...", "* Step 1:..."). Devuelve directamente el resultado.
+2. SI LA IMAGEN CONTIENE UN MAPA DE PROCESOS, ORGANIGRAMA O DIAGRAMA:
+   - Inicia con una breve explicación ejecutiva y natural de qué es la imagen y su propósito en la organización.
+   - Presenta un desglose claro y elegante de su estructura:
+     * Para Mapas de Procesos:
+       - **Entradas (Izquierda)**: Necesidades del mercado y requisitos del servicio.
+       - **Procesos Estratégicos (Arriba)**: Actividades de toma de decisiones y planeación (Dirección, Planeación, etc.).
+       - **Procesos Operativos / Clave (Centro)**: Ciclo central de negocio del laboratorio (Licitaciones, Muestreo, Análisis, etc.).
+       - **Procesos de Apoyo / Soporte (Abajo)**: Procesos que mantienen la operación (Compras, Calidad, Metrología, Administración).
+       - **Salidas (Derecha)**: Servicios finales prestados y satisfacción del cliente.
+     * Para Organigramas:
+       - **Nivel Directivo / Asamblea**: Máxima instancia de gobierno.
+       - **Órganos de Asesoría / Control**: Revisoría fiscal, oficial de cumplimiento.
+       - **Gerencia General**: Dirección ejecutiva principal.
+       - **Gerencias / Direcciones de Línea**: Detalle de cada área y sus respectivos cargos subordinados.
+   - Añade un breve párrafo conciso sobre su relevancia para la auditoría (numerales clave de ISO/IEC 17025).
 
-3. SI HAY DIAGRAMAS, MAPAS DE PROCESOS U ORGANIGRAMAS:
-   - Título y Tipo de Gráfico.
-   - Jerarquía y Conexiones clave.
-   - [ANÁLISIS FUNCIONAL ISO/IEC 17025] (relevancia para numerales 4, 5, 6, 7 y 8).
-   - Diagrama Mermaid (\`\`\`mermaid ... \`\`\`) con reglas limpias (LR para procesos, TD para organigramas).
+3. SI LA PÁGINA CONTIENE TEXTO TÉCNICO O PÁRRAFOS DEL CUERPO:
+   - Transcribe íntegramente el texto sustantivo respetando párrafos y numerales.
 
-4. SI HAY TEXTO TÉCNICO:
-   - Transcribe el texto sustantivo del cuerpo respetando párrafos y numerales.`;
+4. ESTILO:
+   - Redacción 100% natural, fluida, ejecutiva y humana.
+   - Cero metadatos mecánicos ("* Role:...", "* Step 1:..."), directo al contenido.`;
 
   const requestBody = {
     model,
