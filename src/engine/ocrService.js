@@ -16,6 +16,42 @@ let cachedGeminiModels = null;
 let lastModelFetchTime = 0;
 
 /**
+ * Parsea un rango de páginas en un arreglo de números de página válidos.
+ * Soporta formatos: 'all', '1, 3, 5-10, 24', '12-15'
+ */
+export function parsePageRange(rangeStr, totalPages = 1) {
+  if (!rangeStr || !rangeStr.trim() || rangeStr.trim().toLowerCase() === 'all' || rangeStr.trim().toLowerCase() === 'todas') {
+    return null; // null representa todas las páginas
+  }
+
+  const pagesSet = new Set();
+  const parts = rangeStr.split(/[,;\s]+/).map(p => p.trim()).filter(Boolean);
+
+  for (const part of parts) {
+    if (part.includes('-')) {
+      const [startStr, endStr] = part.split('-');
+      const start = parseInt(startStr, 10);
+      const end = parseInt(endStr, 10);
+      if (!isNaN(start) && !isNaN(end)) {
+        const min = Math.max(1, Math.min(start, end));
+        const max = Math.min(totalPages, Math.max(start, end));
+        for (let p = min; p <= max; p++) {
+          pagesSet.add(p);
+        }
+      }
+    } else {
+      const page = parseInt(part, 10);
+      if (!isNaN(page) && page >= 1 && page <= totalPages) {
+        pagesSet.add(page);
+      }
+    }
+  }
+
+  const sorted = Array.from(pagesSet).sort((a, b) => a - b);
+  return sorted.length > 0 ? sorted : null;
+}
+
+/**
  * Consulta dinámicamente a la API de Google los modelos soportados por la clave API
  */
 export async function getAvailableGeminiModels(apiKey) {
@@ -66,9 +102,9 @@ export async function getAvailableGeminiModels(apiKey) {
 }
 
 /**
- * Renderiza las páginas de un archivo PDF a imágenes JPEG en Base64
+ * Renderiza páginas específicas de un archivo PDF a imágenes JPEG en Base64
  */
-export async function renderPdfPagesToImages(fileOrBlob, maxPages = 20) {
+export async function renderPdfPagesToImages(fileOrBlob, targetPages = null, maxPages = 100) {
   let uint8Data;
 
   if (fileOrBlob instanceof Uint8Array) {
@@ -96,12 +132,24 @@ export async function renderPdfPagesToImages(fileOrBlob, maxPages = 20) {
   });
 
   const pdf = await loadingTask.promise;
-  const numPages = Math.min(pdf.numPages, maxPages);
+  const totalDocPages = pdf.numPages;
+
+  // Determinar qué páginas procesar
+  let pagesToProcess = [];
+  if (Array.isArray(targetPages) && targetPages.length > 0) {
+    pagesToProcess = targetPages.filter(p => p >= 1 && p <= totalDocPages);
+  } else {
+    const limit = Math.min(totalDocPages, maxPages);
+    for (let i = 1; i <= limit; i++) {
+      pagesToProcess.push(i);
+    }
+  }
+
   const pageImages = [];
 
-  for (let i = 1; i <= numPages; i++) {
+  for (const pageNum of pagesToProcess) {
     try {
-      const page = await pdf.getPage(i);
+      const page = await pdf.getPage(pageNum);
       // Escala 1.5 para óptima resolución y velocidad de OCR
       const viewport = page.getViewport({ scale: 1.5 });
       const canvas = document.createElement('canvas');
@@ -118,14 +166,14 @@ export async function renderPdfPagesToImages(fileOrBlob, maxPages = 20) {
       const base64Data = dataUrl.split(',')[1];
 
       pageImages.push({
-        pageNumber: i,
-        totalPages: pdf.numPages,
+        pageNumber: pageNum,
+        totalPages: totalDocPages,
         mimeType: 'image/jpeg',
         base64Data,
         dataUrl
       });
     } catch (pageErr) {
-      console.warn(`Error al renderizar página ${i} a imagen:`, pageErr);
+      console.warn(`Error al renderizar página ${pageNum} a imagen:`, pageErr);
     }
   }
 
@@ -168,9 +216,9 @@ export async function renderImageFileToBase64(fileOrBlob) {
 }
 
 /**
- * Transcribe un documento escaneado o imagen utilizando la API de Visión de Gemini u OpenAI
+ * Transcribe un documento escaneado o páginas seleccionadas utilizando la API de Visión de Gemini u OpenAI
  */
-export async function performAIOcrExtraction(doc, apiConfig, onProgress) {
+export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetPages = null) {
   const { provider = 'gemini', apiKey, model } = apiConfig || {};
 
   if (!apiKey || !apiKey.trim()) {
@@ -193,33 +241,35 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress) {
 
   const isPdf = doc.nombre.toLowerCase().endsWith('.pdf') || doc.tipo === 'PDF';
   
-  if (onProgress) onProgress({ step: 'RENDERING', message: 'Preparando páginas e imágenes para visión artificial...' });
+  if (onProgress) onProgress({ step: 'RENDERING', message: 'Preparando páginas seleccionadas para visión artificial...' });
 
   let pageImages = [];
   if (isPdf) {
-    pageImages = await renderPdfPagesToImages(rawFile, 25);
+    pageImages = await renderPdfPagesToImages(rawFile, targetPages, 100);
   } else {
     pageImages = await renderImageFileToBase64(rawFile);
   }
 
   if (pageImages.length === 0) {
-    throw new Error('No se pudieron extraer imágenes del documento para procesar.');
+    throw new Error('No se pudieron extraer imágenes de las páginas seleccionadas.');
   }
 
-  const newContenido = [];
-  const seccionesSet = new Set();
+  const totalSelected = pageImages.length;
+  const newOcrPagesMap = new Map();
 
   for (let idx = 0; idx < pageImages.length; idx++) {
     const pImg = pageImages[idx];
     const pageNum = pImg.pageNumber;
-    const total = pImg.totalPages;
+    const totalDocPages = pImg.totalPages;
 
     if (onProgress) {
       onProgress({ 
         step: 'OCR_PAGE', 
-        page: pageNum, 
-        total,
-        message: `Extrayendo texto con IA de la página ${pageNum} de ${total}...` 
+        page: idx + 1, 
+        total: totalSelected,
+        actualPageNumber: pageNum,
+        totalPagesInDoc: totalDocPages,
+        message: `Extrayendo texto con IA de la página ${pageNum} (${idx + 1} de ${totalSelected})...` 
       });
     }
 
@@ -237,32 +287,67 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress) {
           break;
         }
       }
-      seccionesSet.add(detectedSection);
 
-      newContenido.push({
+      newOcrPagesMap.set(pageNum, {
         seccion: detectedSection,
-        pagina: `${pageNum}/${total}`,
-        texto: ocrText.trim()
+        pagina: `${pageNum}/${totalDocPages}`,
+        texto: ocrText.trim(),
+        isOcr: true
       });
     } else {
-      newContenido.push({
+      newOcrPagesMap.set(pageNum, {
         seccion: `Página ${pageNum}`,
-        pagina: `${pageNum}/${total}`,
-        texto: `[Página ${pageNum}: No se detectó texto legible por OCR en la imagen]`
+        pagina: `${pageNum}/${totalDocPages}`,
+        texto: `[Página ${pageNum}: No se detectó texto legible por OCR en la imagen]`,
+        isOcr: true
       });
     }
   }
 
+  // Fusión inteligente: Si se procesaron páginas específicas, combinar con el contenido previo
+  let finalContenido = [];
+  const existingContenido = Array.isArray(doc.contenido) ? [...doc.contenido] : [];
+
+  if (targetPages && targetPages.length > 0 && existingContenido.length > 0) {
+    const existingMap = new Map();
+    existingContenido.forEach(item => {
+      const match = String(item.pagina).match(/^(\d+)/);
+      const pNum = match ? parseInt(match[1], 10) : null;
+      if (pNum) {
+        existingMap.set(pNum, item);
+      }
+    });
+
+    // Sobrescribir con las páginas transcritas por OCR
+    newOcrPagesMap.forEach((newItem, pNum) => {
+      existingMap.set(pNum, newItem);
+    });
+
+    // Convertir de vuelta y ordenar por número de página
+    finalContenido = Array.from(existingMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(entry => entry[1]);
+  } else {
+    finalContenido = Array.from(newOcrPagesMap.values());
+  }
+
+  // Actualizar lista de secciones
+  const seccionesSet = new Set();
+  finalContenido.forEach(item => {
+    if (item.seccion) seccionesSet.add(item.seccion);
+  });
+
   const updatedDoc = {
     ...doc,
-    paginas: pageImages.length,
+    paginas: doc.paginas || pageImages[0]?.totalPages || 1,
     secciones: Array.from(seccionesSet).length > 0 ? Array.from(seccionesSet) : ['Documento Transcrito por IA'],
-    contenido: newContenido,
+    contenido: finalContenido,
     isScanned: false,
     needsOCR: false,
     ocrApplied: true,
     ocrProvider: provider,
-    ocrDate: new Date().toLocaleDateString()
+    ocrDate: new Date().toLocaleDateString(),
+    ocrTargetPages: targetPages || 'ALL'
   };
 
   return updatedDoc;
@@ -275,7 +360,6 @@ async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
   const cleanKey = (apiKey || '').trim();
   const availableModels = await getAvailableGeminiModels(cleanKey);
 
-  // Ordenar modelos con prioridad: modelo preferido -> flash -> pro
   const candidateModels = [];
   if (preferredModel && availableModels.includes(preferredModel)) {
     candidateModels.push(preferredModel);
