@@ -238,6 +238,30 @@ export async function renderImageFileToBase64(fileOrBlob) {
 }
 
 /**
+ * Detecta qué páginas tienen texto escaso (< 250 caracteres), escaneos o diagramas pendientes
+ */
+export function getIncompleteOrDiagramPages(doc) {
+  if (!doc || !Array.isArray(doc.contenido) || doc.contenido.length === 0) {
+    const total = doc?.paginas || 1;
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const incomplete = [];
+  doc.contenido.forEach((item, idx) => {
+    const match = String(item.pagina).match(/^(\d+)/);
+    const pNum = match ? parseInt(match[1], 10) : idx + 1;
+    const txt = (item.texto || '').trim();
+
+    // Si tiene menos de 250 caracteres, está vacío o contiene marcadores de escaneo
+    if (txt.length < 250 || txt.includes('[Página') || txt.includes('No se detectó texto') || txt.includes('[Escaneado')) {
+      incomplete.push(pNum);
+    }
+  });
+
+  return incomplete.length > 0 ? incomplete : [1];
+}
+
+/**
  * Transcribe un documento escaneado o páginas seleccionadas utilizando la API de Visión de Gemini u OpenAI
  */
 export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetPages = null) {
@@ -276,6 +300,18 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetP
     throw new Error('No se pudieron extraer imágenes de las páginas seleccionadas.');
   }
 
+  // Indexar el texto previo existente por número de página
+  const existingTextByPage = new Map();
+  if (Array.isArray(doc.contenido)) {
+    doc.contenido.forEach(it => {
+      const match = String(it.pagina).match(/^(\d+)/);
+      const pNum = match ? parseInt(match[1], 10) : null;
+      if (pNum) {
+        existingTextByPage.set(pNum, it.texto || '');
+      }
+    });
+  }
+
   const totalSelected = pageImages.length;
   const newOcrPagesMap = new Map();
 
@@ -283,6 +319,7 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetP
     const pImg = pageImages[idx];
     const pageNum = pImg.pageNumber;
     const totalDocPages = pImg.totalPages;
+    const existingPageText = existingTextByPage.get(pageNum) || '';
 
     if (onProgress) {
       onProgress({ 
@@ -291,16 +328,24 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetP
         total: totalSelected,
         actualPageNumber: pageNum,
         totalPagesInDoc: totalDocPages,
-        message: `Extrayendo texto con IA de la página ${pageNum} (${idx + 1} de ${totalSelected})...` 
+        message: `Analizando y completando contenido faltante de la página ${pageNum} (${idx + 1} de ${totalSelected})...` 
       });
     }
 
     const ocrText = provider === 'openai'
-      ? await ocrPageWithOpenAI(pImg, apiKey.trim(), model)
-      : await ocrPageWithGemini(pImg, apiKey.trim(), model);
+      ? await ocrPageWithOpenAI(pImg, apiKey.trim(), model, existingPageText)
+      : await ocrPageWithGemini(pImg, apiKey.trim(), model, existingPageText);
 
-    if (ocrText && ocrText.trim().length > 0) {
-      const lines = ocrText.split('\n').filter(l => l.trim().length > 0);
+    if (ocrText && ocrText.trim().length > 0 && !ocrText.includes('[CONTENIDO COMPLETO]')) {
+      let combinedText = '';
+      if (existingPageText.trim().length > 50 && !ocrText.includes(existingPageText.slice(0, 70))) {
+        // Fusión complementaria: Mantener el texto previo y añadir el diagrama/contenido visual extraído por IA
+        combinedText = `${existingPageText.trim()}\n\n📌 **Contenido Visual / Diagrama Extraído por Visión IA:**\n${ocrText.trim()}`;
+      } else {
+        combinedText = ocrText.trim();
+      }
+
+      const lines = combinedText.split('\n').filter(l => l.trim().length > 0);
       let detectedSection = `Página ${pageNum}`;
       for (const line of lines.slice(0, 4)) {
         const trimmed = line.trim();
@@ -313,14 +358,15 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetP
       newOcrPagesMap.set(pageNum, {
         seccion: detectedSection,
         pagina: `${pageNum}/${totalDocPages}`,
-        texto: ocrText.trim(),
+        texto: combinedText,
         isOcr: true
       });
     } else {
+      // Si el contenido ya estaba completo o no hubo texto nuevo
       newOcrPagesMap.set(pageNum, {
         seccion: `Página ${pageNum}`,
         pagina: `${pageNum}/${totalDocPages}`,
-        texto: `[Página ${pageNum}: No se detectó texto legible por OCR en la imagen]`,
+        texto: existingPageText.trim() || `[Página ${pageNum}: Sin contenido legible detectado]`,
         isOcr: true
       });
     }
@@ -330,7 +376,7 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetP
   let finalContenido = [];
   const existingContenido = Array.isArray(doc.contenido) ? [...doc.contenido] : [];
 
-  if (targetPages && targetPages.length > 0 && existingContenido.length > 0) {
+  if (existingContenido.length > 0) {
     const existingMap = new Map();
     existingContenido.forEach(item => {
       const match = String(item.pagina).match(/^(\d+)/);
@@ -340,7 +386,7 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetP
       }
     });
 
-    // Sobrescribir con las páginas transcritas por OCR
+    // Actualizar con las páginas procesadas complementariamente por IA
     newOcrPagesMap.forEach((newItem, pNum) => {
       existingMap.set(pNum, newItem);
     });
@@ -362,7 +408,7 @@ export async function performAIOcrExtraction(doc, apiConfig, onProgress, targetP
   const updatedDoc = {
     ...doc,
     paginas: doc.paginas || pageImages[0]?.totalPages || 1,
-    secciones: Array.from(seccionesSet).length > 0 ? Array.from(seccionesSet) : ['Documento Transcrito por IA'],
+    secciones: Array.from(seccionesSet).length > 0 ? Array.from(seccionesSet) : ['Documento Indexado por IA'],
     contenido: finalContenido,
     isScanned: false,
     needsOCR: false,
@@ -454,7 +500,7 @@ export function cleanExtractedOcrText(rawText) {
 // ─────────────────────────────────────────────
 // OCR CON GEMINI VISION (Detección Dinámica de Modelos)
 // ─────────────────────────────────────────────
-async function ocrPageWithGemini(pageImg, apiKey, preferredModel) {
+async function ocrPageWithGemini(pageImg, apiKey, preferredModel, existingText = '') {
   const cleanKey = (apiKey || '').trim();
   const availableModels = await getAvailableGeminiModels(cleanKey);
 
@@ -476,7 +522,36 @@ REGLAS OBLIGATORIAS:
 - Omite tablas de encabezados repetitivas (logos, código MCL-001, versión, fechas, número de página) y marcas de agua.
 - Transcribe con fidelidad el texto sustantivo y la estructura visible del gráfico.`;
 
-  const userPrompt = `Extrae fielmente el contenido de esta imagen en ESPAÑOL, limitándote a lo que está en el documento:
+  const hasExistingText = existingText && existingText.trim().length > 40;
+
+  let userPrompt = '';
+  if (hasExistingText) {
+    userPrompt = `════ TEXTO DIGITAL QUE YA FUE EXTRAÍDO CON ÉXITO DE ESTA PÁGINA ════
+"${existingText.trim().slice(0, 1500)}"
+═════════════════════════════════════════════════════════════════════
+
+Tu misión es analizar la imagen y extraer EXCLUSIVAMENTE el contenido visual FALTANTE (diagramas, organigramas, mapas de procesos, tablas gráficas o párrafos no capturados en el texto citado arriba).
+NO vuelvas a transcribir los párrafos de texto que ya fueron capturados arriba.
+
+1. Si hay un MAPA DE PROCESOS o DIAGRAMA DE FLUJO:
+- Breve descripción del gráfico y su propósito según el documento.
+- **Desglose estructurado:**
+  * **Entradas (Izquierda):** [Elementos visibles de entrada]
+  * **Procesos Estratégicos (Arriba):** [Elementos visibles de dirección/planeación]
+  * **Procesos Operativos / Misionales (Centro):** [Elementos visibles misionales/técnicos]
+  * **Procesos de Apoyo / Soporte (Abajo):** [Elementos visibles de apoyo]
+  * **Salidas (Derecha):** [Elementos visibles de salida]
+
+2. Si hay un ORGANIGRAMA:
+- Breve descripción y desglose por niveles jerárquicos visibles.
+
+3. Si hay TEXTO o TABLAS FALTANTES que NO están en el texto citado arriba:
+- Transcribe fielmente las partes faltantes.
+
+4. Si la página ya está completa y no contiene gráficos ni texto faltante:
+- Responde únicamente: [CONTENIDO COMPLETO]`;
+  } else {
+    userPrompt = `Extrae fielmente el contenido de esta imagen en ESPAÑOL, limitándote a lo que está en el documento:
 
 1. Si la imagen contiene un MAPA DE PROCESOS o DIAGRAMA:
 - Breve descripción inicial del gráfico y su propósito según lo que indica el documento.
@@ -486,7 +561,6 @@ REGLAS OBLIGATORIAS:
   * **Procesos Operativos / Clave (Centro):** [Elementos visibles misionales/técnicos]
   * **Procesos de Apoyo / Soporte (Abajo):** [Elementos visibles de apoyo]
   * **Salidas (Derecha):** [Elementos visibles de salida]
-- (NO agregues párrafos de teoría o justificación de auditoría).
 
 2. Si es un ORGANIGRAMA:
 - Breve descripción del organigrama.
@@ -498,6 +572,7 @@ REGLAS OBLIGATORIAS:
 
 3. Si hay TEXTO TÉCNICO o PÁRRAFOS en el cuerpo:
 - Transcribe íntegramente las frases del cuerpo (omitiendo encabezados y pies de página).`;
+  }
 
   const requestBody = {
     systemInstruction: {

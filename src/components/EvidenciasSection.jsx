@@ -24,7 +24,7 @@ import {
   Search
 } from 'lucide-react';
 import { parseDocument } from '../engine/textExtractor';
-import { performAIOcrExtraction, parsePageRange } from '../engine/ocrService';
+import { performAIOcrExtraction, parsePageRange, getIncompleteOrDiagramPages } from '../engine/ocrService';
 import { setCachedFile, getCachedFile, isTrueBlobOrFile } from '../engine/fileCache';
 import ConfirmDialogModal from './ConfirmDialogModal';
 import MermaidViewer from './MermaidViewer';
@@ -273,13 +273,15 @@ export default function EvidenciasSection({
 
     const totalDocPages = doc.paginas || (doc.contenido ? doc.contenido.length : 1);
     const isPdf = doc.nombre.toLowerCase().endsWith('.pdf') || doc.tipo === 'PDF';
+    const incompletePages = getIncompleteOrDiagramPages(doc);
 
-    // Si es un PDF de múltiples páginas, abrir el selector de páginas
+    // Si es un PDF de múltiples páginas, abrir el selector de páginas inteligente
     if ((isPdf && totalDocPages > 1) || forceOpenModal) {
+      const defaultMode = (incompletePages.length > 0 && incompletePages.length < totalDocPages) ? 'incomplete' : 'all';
       setPageModalState({
         isOpen: true,
         doc,
-        mode: 'all',
+        mode: defaultMode,
         customPages: ''
       });
       return;
@@ -304,11 +306,13 @@ export default function EvidenciasSection({
     if (reuploadDocRef.current) reuploadDocRef.current.value = '';
 
     const totalDocPages = docWithFile.paginas || 1;
+    const incompletePages = getIncompleteOrDiagramPages(docWithFile);
+
     if (totalDocPages > 1) {
       setPageModalState({
         isOpen: true,
         doc: docWithFile,
-        mode: 'all',
+        mode: (incompletePages.length > 0 && incompletePages.length < totalDocPages) ? 'incomplete' : 'all',
         customPages: ''
       });
     } else {
@@ -322,12 +326,16 @@ export default function EvidenciasSection({
     const totalDocPages = doc.paginas || (doc.contenido ? doc.contenido.length : 1);
 
     let targetPages = null;
-    if (pageModalState.mode === 'custom') {
+    if (pageModalState.mode === 'incomplete') {
+      targetPages = getIncompleteOrDiagramPages(doc);
+    } else if (pageModalState.mode === 'custom') {
       targetPages = parsePageRange(pageModalState.customPages, totalDocPages);
       if (!targetPages || targetPages.length === 0) {
         alert(`Por favor ingrese un rango o lista de páginas válido entre 1 y ${totalDocPages}.`);
         return;
       }
+    } else if (pageModalState.mode === 'all') {
+      targetPages = null;
     }
 
     setPageModalState(prev => ({ ...prev, isOpen: false }));
@@ -751,10 +759,119 @@ export default function EvidenciasSection({
             <div className="space-y-3">
               <span className="text-xs font-semibold text-slate-300 block">¿Qué páginas desea procesar con IA?</span>
               
-              {/* Opción 1: Todas las páginas */}
+              {/* Opción 1: Solo páginas incompletas o con diagramas (Recomendado) */}
+              {(() => {
+                const incPages = pageModalState.doc ? getIncompleteOrDiagramPages(pageModalState.doc) : [];
+                return (
+                  <label 
+                    onClick={() => setPageModalState(prev => ({ ...prev, mode: 'incomplete' }))}
+                    className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                      pageModalState.mode === 'incomplete'
+                        ? 'bg-indigo-950/40 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/30'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <input 
+                      type="radio" 
+                      name="ocrPageMode" 
+                      checked={pageModalState.mode === 'incomplete'} 
+                      onChange={() => setPageModalState(prev => ({ ...prev, mode: 'incomplete' }))}
+                      className="mt-0.5 text-indigo-600 focus:ring-0 cursor-pointer"
+                    />
+                    <div className="text-xs space-y-1 flex-1">
+                      <div className="font-semibold text-white flex items-center justify-between flex-wrap gap-2">
+                        <span className="flex items-center gap-1.5 text-amber-300 font-bold">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Solo páginas con diagramas o incompletas (Recomendado)</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono text-[10.5px] font-bold">
+                          ⚡ {incPages.length} de {pageModalState.doc?.paginas || 1} pág(s)
+                        </span>
+                      </div>
+                      <p className="text-slate-400 text-[11px] leading-relaxed">
+                        Analiza y extrae únicamente los gráficos, organigramas, mapas de procesos o contenido faltante, fusionándolo de forma inteligente con el texto ya extraído para optimizar tiempo y cuota.
+                      </p>
+                      {incPages.length > 0 && (
+                        <div className="text-[10.5px] font-mono text-indigo-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-indigo-500/20 inline-block mt-1">
+                          Hojas detectadas: [{incPages.slice(0, 10).join(', ')}{incPages.length > 10 ? '...' : ''}]
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                );
+              })()}
+
+              {/* Opción 2: Páginas específicas */}
+              <label 
+                onClick={() => setPageModalState(prev => ({ ...prev, mode: 'custom' }))}
+                className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                  pageModalState.mode === 'custom'
+                    ? 'bg-indigo-950/40 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/30'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <input 
+                  type="radio" 
+                  name="ocrPageMode" 
+                  checked={pageModalState.mode === 'custom'} 
+                  onChange={() => setPageModalState(prev => ({ ...prev, mode: 'custom' }))}
+                  className="mt-0.5 text-indigo-600 focus:ring-0 cursor-pointer"
+                />
+                <div className="text-xs space-y-2 flex-1">
+                  <div className="font-semibold text-white flex items-center justify-between">
+                    <span>Páginas específicas personalizadas</span>
+                    <span className="text-[10.5px] text-amber-300 font-mono">
+                      Solo hojas seleccionadas
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-[11px]">
+                    Ideal para elegir manualmente qué hojas exactas desea enviar a la IA.
+                  </p>
+
+                  {pageModalState.mode === 'custom' && (
+                    <div className="space-y-1.5 pt-1 animate-in fade-in duration-150">
+                      <input
+                        type="text"
+                        value={pageModalState.customPages}
+                        onChange={(e) => setPageModalState(prev => ({ ...prev, customPages: e.target.value }))}
+                        placeholder="Ej: 1, 3, 5-8, 11, 24-26"
+                        className="w-full bg-slate-900 border border-indigo-500/50 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-indigo-400"
+                        autoFocus
+                      />
+                      
+                      {/* Visualizador / Preview de páginas parseadas */}
+                      {(() => {
+                        const parsed = parsePageRange(pageModalState.customPages, pageModalState.doc?.paginas || 1);
+                        if (parsed && parsed.length > 0) {
+                          return (
+                            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-mono">
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                              <span>Se procesarán {parsed.length} página(s): [{parsed.join(', ')}]</span>
+                            </div>
+                          );
+                        } else if (pageModalState.customPages.trim()) {
+                          return (
+                            <div className="flex items-center gap-1.5 text-[11px] text-amber-400">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                              <span>Ingrese páginas válidas entre 1 y {pageModalState.doc?.paginas || 1}</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <span className="text-[10.5px] text-slate-500 block">
+                            Formato permitido: números separados por coma o guión para rangos (ej. 10-15).
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              </label>
+
+              {/* Opción 3: Todas las páginas */}
               <label 
                 onClick={() => setPageModalState(prev => ({ ...prev, mode: 'all' }))}
-                className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                   pageModalState.mode === 'all'
                     ? 'bg-indigo-950/40 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/30'
                     : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
@@ -771,79 +888,12 @@ export default function EvidenciasSection({
                   <div className="font-semibold text-white flex items-center justify-between">
                     <span>Todas las páginas</span>
                     <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 font-mono text-[10.5px]">
-                      1 a {pageModalState.doc.paginas || 1}
+                      1 a {pageModalState.doc?.paginas || 1}
                     </span>
                   </div>
                   <p className="text-slate-400 text-[11px]">
-                    Transcribe el documento completo de inicio a fin ({pageModalState.doc.paginas || 1} páginas).
+                    Transcribe el documento completo de inicio a fin ({pageModalState.doc?.paginas || 1} páginas).
                   </p>
-                </div>
-              </label>
-
-              {/* Opción 2: Páginas específicas */}
-              <label 
-                onClick={() => setPageModalState(prev => ({ ...prev, mode: 'custom' }))}
-                className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
-                  pageModalState.mode === 'custom'
-                    ? 'bg-indigo-950/40 border-indigo-500 text-white shadow-md ring-1 ring-indigo-500/30'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <input 
-                  type="radio" 
-                  name="ocrPageMode" 
-                  checked={pageModalState.mode === 'custom'} 
-                  onChange={() => setPageModalState(prev => ({ ...prev, mode: 'custom' }))}
-                  className="mt-0.5 text-indigo-600 focus:ring-0 cursor-pointer"
-                />
-                <div className="text-xs space-y-2 flex-1">
-                  <div className="font-semibold text-white flex items-center justify-between">
-                    <span>Páginas específicas</span>
-                    <span className="text-[10.5px] text-amber-300 font-mono">
-                      Solo hojas seleccionadas
-                    </span>
-                  </div>
-                  <p className="text-slate-400 text-[11px]">
-                    Ideal para documentos grandes donde solo ciertas hojas contienen tablas escaneadas o firmas.
-                  </p>
-
-                  {pageModalState.mode === 'custom' && (
-                    <div className="space-y-1.5 pt-1 animate-in fade-in duration-150">
-                      <input
-                        type="text"
-                        value={pageModalState.customPages}
-                        onChange={(e) => setPageModalState(prev => ({ ...prev, customPages: e.target.value }))}
-                        placeholder="Ej: 1, 3, 5-8, 12, 24-26"
-                        className="w-full bg-slate-900 border border-indigo-500/50 rounded-xl px-3 py-2 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-indigo-400"
-                        autoFocus
-                      />
-                      
-                      {/* Visualizador / Preview de páginas parseadas */}
-                      {(() => {
-                        const parsed = parsePageRange(pageModalState.customPages, pageModalState.doc.paginas || 1);
-                        if (parsed && parsed.length > 0) {
-                          return (
-                            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-mono">
-                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                              <span>Se procesarán {parsed.length} página(s): [{parsed.join(', ')}]</span>
-                            </div>
-                          );
-                        } else if (pageModalState.customPages.trim()) {
-                          return (
-                            <div className="flex items-center gap-1.5 text-[11px] text-amber-400">
-                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                              <span>Ingrese páginas válidas entre 1 y {pageModalState.doc.paginas || 1}</span>
-                            </div>
-                          );
-                        }
-                        return (
-                          <span className="text-[10.5px] text-slate-500 block">
-                            Formato permitido: números separados por coma o guión para rangos (ej. 10-15).
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  )}
                 </div>
               </label>
             </div>
@@ -852,7 +902,7 @@ export default function EvidenciasSection({
             <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex items-start gap-2 text-[11px] text-slate-400 leading-relaxed">
               <HelpCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
               <span>
-                Las páginas que no selecciones conservarán su texto original intacto y no gastarán cuota innecesaria de IA.
+                Las páginas que no requieran análisis conservarán su texto original intacto y no gastarán cuota innecesaria de IA.
               </span>
             </div>
 
@@ -868,14 +918,16 @@ export default function EvidenciasSection({
               <button
                 type="button"
                 onClick={handleStartOcrFromModal}
-                disabled={pageModalState.mode === 'custom' && (!parsePageRange(pageModalState.customPages, pageModalState.doc.paginas || 1) || parsePageRange(pageModalState.customPages, pageModalState.doc.paginas || 1).length === 0)}
+                disabled={pageModalState.mode === 'custom' && (!parsePageRange(pageModalState.customPages, pageModalState.doc?.paginas || 1) || parsePageRange(pageModalState.customPages, pageModalState.doc?.paginas || 1).length === 0)}
                 className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 <span>
                   {pageModalState.mode === 'custom' 
-                    ? `Iniciar en ${parsePageRange(pageModalState.customPages, pageModalState.doc.paginas || 1)?.length || 0} página(s)`
-                    : `Iniciar en ${pageModalState.doc.paginas || 1} páginas`
+                    ? `Iniciar en ${parsePageRange(pageModalState.customPages, pageModalState.doc?.paginas || 1)?.length || 0} página(s)`
+                    : pageModalState.mode === 'incomplete'
+                    ? `Iniciar en ${getIncompleteOrDiagramPages(pageModalState.doc)?.length || 1} página(s) detectada(s)`
+                    : `Iniciar en ${pageModalState.doc?.paginas || 1} páginas`
                   }
                 </span>
               </button>
