@@ -81,9 +81,9 @@ ${numeralesTexto}
 ${evidenciasTexto}
 
 ═══ TU TAREA ═══
-Aplica las instrucciones de tu perfil de Agente Auditor para evaluar CADA UNO de los numerales listados arriba con base en las evidencias.
+Aplica RIGUROSAMENTE las instrucciones, criterios y estructura de salida definidos en tu perfil de Agente Auditor (System Prompt) para evaluar CADA UNO de los numerales listados arriba con base en las evidencias.
 
-Debes responder OBLIGATORIAMENTE en formato JSON con esta estructura exacta:
+Debes estructurar tu respuesta OBLIGATORIAMENTE en formato JSON, creando un elemento en el array "dynamicFields" para cada viñeta, campo o sección solicitada en tu perfil de Agente:
 {
   "subnumeralesResultados": [
     {
@@ -91,24 +91,10 @@ Debes responder OBLIGATORIAMENTE en formato JSON con esta estructura exacta:
       "requisito": "Texto del requisito evaluado",
       "dynamicFields": [
         {
-          "label": "Estado del cumplimiento",
-          "value": "CUMPLE o NO CUMPLE",
-          "isBadge": true
-        },
-        {
-          "label": "Fragmento de la evidencia utilizada",
-          "value": "Texto exacto citado de la evidencia...",
-          "isParagraph": true
-        },
-        {
-          "label": "Justificación técnica",
-          "value": "Análisis técnico y fundamentación...",
-          "isParagraph": true
-        },
-        {
-          "label": "Nivel de confianza",
-          "value": "95%",
-          "isBadge": true
+          "label": "Nombre exacto del campo o viñeta de tus instrucciones (ej. Estado del cumplimiento, Hallazgo, Causa Raíz, Evidencia 1, Justificación técnica, Nivel de confianza, etc.)",
+          "value": "Contenido o evaluación detallada correspondiente a este campo",
+          "isParagraph": true/false (true si es un texto largo explicativo o cita; false si es una palabra corta, porcentaje o estado),
+          "isBadge": true/false (true si es un estado breve como CUMPLE/NO CUMPLE, porcentaje 95%, nivel ALTO/MEDIO/BAJO o código corto)
         }
       ]
     }
@@ -245,14 +231,61 @@ function parseGeminiResponse(textResponse, numerales) {
     }
 
     const parsed = JSON.parse(cleanText);
+    
+    // Normalizar la lista de resultados tanto si viene en subnumeralesResultados como si es un array directo
+    let rawItems = [];
     if (parsed && Array.isArray(parsed.subnumeralesResultados)) {
+      rawItems = parsed.subnumeralesResultados;
+    } else if (Array.isArray(parsed)) {
+      rawItems = parsed;
+    }
+
+    if (rawItems.length > 0) {
+      const normalized = rawItems.map(item => {
+        let fields = [];
+        
+        if (Array.isArray(item.dynamicFields) && item.dynamicFields.length > 0) {
+          fields = item.dynamicFields.map(f => {
+            const valStr = typeof f.value === 'object' ? JSON.stringify(f.value, null, 2) : String(f.value || '');
+            const isLong = valStr.length > 60 || valStr.includes('\n');
+            return {
+              label: f.label || 'Detalle',
+              value: valStr,
+              isParagraph: f.isParagraph !== undefined ? f.isParagraph : isLong,
+              isBadge: f.isBadge !== undefined ? f.isBadge : (!isLong && valStr.length <= 35)
+            };
+          });
+        } else {
+          // Si la IA devolvió un objeto plano con claves personalizadas
+          Object.keys(item).forEach(key => {
+            if (!['subnumeral', 'codigo', 'requisito', 'id'].includes(key.toLowerCase())) {
+              const val = item[key];
+              const valStr = typeof val === 'object' ? JSON.stringify(val, null, 2) : String(val || '');
+              const isLong = valStr.length > 60 || valStr.includes('\n');
+              fields.push({
+                label: key,
+                value: valStr,
+                isParagraph: isLong,
+                isBadge: !isLong && valStr.length <= 35
+              });
+            }
+          });
+        }
+
+        return {
+          subnumeral: item.subnumeral || item.codigo || 'N/A',
+          requisito: item.requisito || '',
+          dynamicFields: fields
+        };
+      });
+
       return {
-        subnumeralesResultados: parsed.subnumeralesResultados,
-        resumenGlobal: { totalSubnumerales: parsed.subnumeralesResultados.length }
+        subnumeralesResultados: normalized,
+        resumenGlobal: { totalSubnumerales: normalized.length }
       };
     }
   } catch (e) {
-    console.warn('Error parseando JSON de Gemini. Generando fallback estructurado:', e);
+    console.warn('Error parseando JSON de IA. Generando fallback estructurado:', e);
   }
 
   return {

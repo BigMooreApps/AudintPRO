@@ -52,18 +52,45 @@ export default function ResultadosDashboard({
     );
   }
 
-  // Extraer estado recomendado por la IA
+  // Estilo dinámico de badges según el contenido del campo
+  const getFieldBadgeStyle = (val = '') => {
+    const upper = String(val).toUpperCase().trim();
+    if (upper.includes('NO CUMPLE') || upper.includes('NO CONFORME') || upper.includes('CRITICO') || upper === 'NO' || upper.includes('DEFICIENTE') || upper.includes('INCUMPLIMIENTO')) {
+      return 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+    }
+    if (upper.includes('CUMPLE') || upper.includes('CONFORME') || upper.includes('BAJO RIESGO') || upper === 'SI' || upper.includes('EXCELENTE') || upper.includes('SATISFACTORIO')) {
+      return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    }
+    if (upper.includes('PARCIAL') || upper.includes('OBSERVACION') || upper.includes('MEDIO') || upper.includes('EN PROCESO') || upper.includes('REVISION') || upper.includes('OPORTUNIDAD')) {
+      return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+    }
+    return 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 font-mono';
+  };
+
+  // Extraer estado recomendado por la IA a partir de cualquier campo generado
   const getAiRecommendedState = (dynamicFields = []) => {
+    // 1. Buscar en campos explícitos de estado / conformidad
     const estadoField = dynamicFields.find(f => 
       f.label.toLowerCase().includes('estado') || 
       f.label.toLowerCase().includes('cumplimiento') ||
-      (typeof f.value === 'string' && (f.value.toUpperCase().includes('CUMPLE') || f.value.toUpperCase().includes('NO CUMPLE')))
+      f.label.toLowerCase().includes('conformidad') ||
+      f.label.toLowerCase().includes('dictamen') ||
+      f.label.toLowerCase().includes('resultado')
     );
 
-    if (!estadoField) return 'CUMPLE';
-    const val = (estadoField.value || '').toUpperCase();
-    if (val.includes('NO CUMPLE')) return 'NO CUMPLE';
-    if (val.includes('CUMPLE')) return 'CUMPLE';
+    if (estadoField) {
+      const val = String(estadoField.value || '').toUpperCase();
+      if (val.includes('NO CUMPLE') || val.includes('NO CONFORME') || val.includes('INCUMPLE')) return 'NO CUMPLE';
+      if (val.includes('CUMPLE') || val.includes('CONFORME')) return 'CUMPLE';
+      if (val.includes('OBSERV') || val.includes('PARCIAL')) return 'OBSERVACION';
+    }
+
+    // 2. Buscar si algún campo menciona claramente no cumplimiento
+    for (const f of dynamicFields) {
+      const val = String(f.value || '').toUpperCase();
+      if (val.includes('NO CUMPLE') || val.includes('NO CONFORME')) return 'NO CUMPLE';
+    }
+
     return 'CUMPLE';
   };
 
@@ -342,34 +369,36 @@ export default function ResultadosDashboard({
 
                       <ul className="space-y-3.5 text-xs text-slate-200 leading-relaxed pl-1">
                         {item.dynamicFields && item.dynamicFields.length > 0 ? (
-                          item.dynamicFields.map((field, fIdx) => (
-                            <li key={fIdx} className="flex items-start gap-2.5">
-                              <span className="text-slate-500 font-bold text-base leading-none">•</span>
-                              {field.isParagraph ? (
-                                <div className="space-y-1.5 w-full">
-                                  <strong className="text-slate-100 block font-semibold">{field.label}:</strong>
-                                  <div className="italic text-slate-300 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 text-[11.5px] leading-relaxed font-mono whitespace-pre-line">
-                                    {field.value}
+                          item.dynamicFields.map((field, fIdx) => {
+                            const valStr = typeof field.value === 'object' ? JSON.stringify(field.value) : String(field.value || '');
+                            const isMultiline = valStr.includes('\n') || valStr.length > 80;
+                            const isBadge = field.isBadge || (!isMultiline && valStr.length <= 35);
+
+                            return (
+                              <li key={fIdx} className="flex items-start gap-2.5">
+                                <span className="text-indigo-400 font-bold text-base leading-none">•</span>
+                                {field.isParagraph || isMultiline ? (
+                                  <div className="space-y-1.5 w-full">
+                                    <strong className="text-slate-100 block font-semibold">{field.label}:</strong>
+                                    <div className="text-slate-200 bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 text-[11.5px] leading-relaxed whitespace-pre-line shadow-sm font-sans">
+                                      {valStr}
+                                    </div>
                                   </div>
-                                </div>
-                              ) : (
-                                <span>
-                                  <strong className="text-slate-100">{field.label}:</strong>{' '}
-                                  {field.isBadge ? (
-                                    <span className={`ml-2 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                                      (field.value || '').toUpperCase().includes('CUMPLE') && !(field.value || '').toUpperCase().includes('NO CUMPLE')
-                                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                                        : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
-                                    }`}>
-                                      {field.value}
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-200 font-medium">{field.value}</span>
-                                  )}
-                                </span>
-                              )}
-                            </li>
-                          ))
+                                ) : (
+                                  <div className="flex items-center flex-wrap gap-2">
+                                    <strong className="text-slate-100">{field.label}:</strong>
+                                    {isBadge ? (
+                                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getFieldBadgeStyle(valStr)}`}>
+                                        {valStr}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-200 font-medium">{valStr}</span>
+                                    )}
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })
                         ) : (
                           <li className="text-slate-400 italic">La IA no generó campos de respuesta para este subnumeral.</li>
                         )}
