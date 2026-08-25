@@ -299,7 +299,18 @@ export default function App() {
   const [agents, setAgents] = useState(() => {
     try {
       const saved = localStorage.getItem('audint_pro_agents');
-      return saved ? JSON.parse(saved) : DEFAULT_AGENTS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(a => {
+            if (a.id === 'agent-iso-17025' && (!a.instrucciones || a.instrucciones.includes('NOTA 1: Cuando se tengan varias evidencias'))) {
+              return { ...a, instrucciones: DEFAULT_AGENTS[0].instrucciones };
+            }
+            return a;
+          });
+        }
+      }
+      return DEFAULT_AGENTS;
     } catch (e) {
       return DEFAULT_AGENTS;
     }
