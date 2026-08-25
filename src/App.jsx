@@ -828,6 +828,7 @@ export default function App() {
         onSelectAgent={handleSelectAgent}
         onSaveAgents={handleSaveAgents}
         currentUser={currentUser}
+        areas={areas}
       />
 
       <AuditoresModal

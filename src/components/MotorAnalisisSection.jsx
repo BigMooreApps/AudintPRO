@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Sparkles, CheckCircle2, ShieldCheck, AlertCircle, RefreshCw, Cpu, Sliders, Check, Bot, Plus, Edit3, Trash2, Globe, Lock } from 'lucide-react';
+import { Play, Sparkles, CheckCircle2, ShieldCheck, AlertCircle, RefreshCw, Cpu, Sliders, Check, Bot, Plus, Edit3, Trash2, Globe, Lock, Users } from 'lucide-react';
 import { runAIAuditAnalysis } from '../engine/aiService';
 import ConfirmDialogModal from './ConfirmDialogModal';
 
@@ -35,7 +35,11 @@ export default function MotorAnalisisSection({
   // Filtrar agentes según visibilidad y permisos del usuario
   const visibleAgents = agents.filter(ag => {
     if (!currentUser || currentUser.role === 'SUPER_AUDITOR') return true;
-    return ag.esPublico !== false || ag.creadoPor === currentUser.id;
+    if (ag.creadoPor && ag.creadoPor === currentUser.id) return true;
+    if (Array.isArray(ag.allowedAreaIds) && ag.allowedAreaIds.length > 0) {
+      return currentUser.areaId && ag.allowedAreaIds.includes(currentUser.areaId);
+    }
+    return ag.esPublico !== false;
   });
 
   const selectedAgent = visibleAgents.find(a => a.id === selectedAgentId) || visibleAgents[0] || agents[0];
@@ -199,15 +203,20 @@ export default function MotorAnalisisSection({
                         {ag.nombre}
                       </h4>
                       <div className="flex items-center gap-1 mt-0.5">
-                        {isAgentPublic ? (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-400 font-medium">
-                            <Globe className="w-2.5 h-2.5" />
-                            <span>Público</span>
+                        {Array.isArray(ag.allowedAreaIds) && ag.allowedAreaIds.length > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] text-blue-400 font-medium">
+                            <Users className="w-2.5 h-2.5" />
+                            <span>{ag.allowedAreaIds.length} Áreas</span>
                           </span>
-                        ) : (
+                        ) : ag.esPublico === false ? (
                           <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-400 font-medium">
                             <Lock className="w-2.5 h-2.5" />
                             <span>Privado</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-400 font-medium">
+                            <Globe className="w-2.5 h-2.5" />
+                            <span>Público</span>
                           </span>
                         )}
                       </div>

@@ -200,6 +200,7 @@ export async function fetchAgentsFromSupabase() {
       rol: ag.rol || 'AUDITOR',
       activo: ag.activo !== false,
       esPublico: ag.es_publico !== false,
+      allowedAreaIds: Array.isArray(ag.allowed_area_ids) ? ag.allowed_area_ids : [],
       creadoPor: ag.creado_por || 'SISTEMA',
       creadorNombre: ag.creador_nombre || 'Sistema',
       createdAt: ag.created_at,
@@ -225,6 +226,7 @@ export async function syncAgentToSupabase(agent) {
       rol: agent.rol || 'AUDITOR',
       activo: agent.activo !== false,
       es_publico: agent.esPublico !== false,
+      allowed_area_ids: agent.allowedAreaIds || [],
       creado_por: agent.creadoPor || null,
       creador_nombre: agent.creadorNombre || null,
       updated_at: new Date().toISOString()
@@ -248,6 +250,7 @@ export async function syncAllAgentsToSupabase(agentsList = []) {
       rol: agent.rol || 'AUDITOR',
       activo: agent.activo !== false,
       es_publico: agent.esPublico !== false,
+      allowed_area_ids: agent.allowedAreaIds || [],
       creado_por: agent.creadoPor || null,
       creador_nombre: agent.creadorNombre || null,
       updated_at: new Date().toISOString()

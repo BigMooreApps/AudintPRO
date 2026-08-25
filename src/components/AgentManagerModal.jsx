@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bot, Plus, Trash2, Edit3, Check, Globe, Lock, User, ShieldCheck } from 'lucide-react';
+import { 
+  X, 
+  Bot, 
+  Plus, 
+  Trash2, 
+  Edit3, 
+  Check, 
+  Globe, 
+  Lock, 
+  User, 
+  ShieldCheck, 
+  Users, 
+  CheckSquare, 
+  Square, 
+  Building2 
+} from 'lucide-react';
 import ConfirmDialogModal from './ConfirmDialogModal';
+import { DEFAULT_AREAS } from '../data/defaultMapeo';
 
 export const DEFAULT_AGENTS = [
   {
@@ -182,15 +198,20 @@ export default function AgentManagerModal({
   targetAgentId, 
   onSelectAgent, 
   onSaveAgents,
-  currentUser
+  currentUser,
+  areas = []
 }) {
+  const availableAreas = areas && areas.length > 0 ? areas : DEFAULT_AREAS;
   const [agentsList, setAgentsList] = useState(agents && agents.length > 0 ? agents : DEFAULT_AGENTS);
   const [activeEditingId, setActiveEditingId] = useState(targetAgentId || selectedAgentId || (agentsList[0] ? agentsList[0].id : ''));
   
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [instrucciones, setInstrucciones] = useState('');
-  const [esPublico, setEsPublico] = useState(true);
+  
+  // Modos de visibilidad: 'PUBLIC' (Todos) | 'CUSTOM' (Áreas / Usuarios Específicos) | 'PRIVATE' (Solo Autor y Super Auditor)
+  const [visibilidadMode, setVisibilidadMode] = useState('PUBLIC');
+  const [allowedAreaIds, setAllowedAreaIds] = useState([]);
   const [creadoPor, setCreadoPor] = useState(currentUser?.id || 'user-super-auditor');
   const [creadorNombre, setCreadorNombre] = useState(currentUser?.nombre || 'Super Auditor');
 
@@ -219,7 +240,8 @@ export default function AgentManagerModal({
         setNombre('Nuevo Agente Auditor');
         setDescripcion('Agente personalizado de auditoría documental');
         setInstrucciones('');
-        setEsPublico(true);
+        setVisibilidadMode('PUBLIC');
+        setAllowedAreaIds([]);
         setCreadoPor(currentUser?.id || 'user-super-auditor');
         setCreadorNombre(currentUser?.nombre || 'Auditor');
       } else {
@@ -230,9 +252,19 @@ export default function AgentManagerModal({
           setNombre(current.nombre);
           setDescripcion(current.descripcion || '');
           setInstrucciones(current.instrucciones || '');
-          setEsPublico(current.esPublico !== false);
           setCreadoPor(current.creadoPor || currentUser?.id || 'user-super-auditor');
           setCreadorNombre(current.creadorNombre || currentUser?.nombre || 'Auditor');
+          
+          if (Array.isArray(current.allowedAreaIds) && current.allowedAreaIds.length > 0) {
+            setVisibilidadMode('CUSTOM');
+            setAllowedAreaIds(current.allowedAreaIds);
+          } else if (current.esPublico === false) {
+            setVisibilidadMode('PRIVATE');
+            setAllowedAreaIds([]);
+          } else {
+            setVisibilidadMode('PUBLIC');
+            setAllowedAreaIds([]);
+          }
         }
       }
     }
@@ -240,10 +272,14 @@ export default function AgentManagerModal({
 
   if (!isOpen) return null;
 
-  // Filtrar agentes visibles según rol del usuario actual
+  // Filtrar agentes visibles según rol y área del usuario actual
   const visibleAgentsList = agentsList.filter(agent => {
     if (!currentUser || currentUser.role === 'SUPER_AUDITOR') return true;
-    return agent.esPublico !== false || agent.creadoPor === currentUser.id;
+    if (agent.creadoPor && agent.creadoPor === currentUser.id) return true;
+    if (Array.isArray(agent.allowedAreaIds) && agent.allowedAreaIds.length > 0) {
+      return currentUser.areaId && agent.allowedAreaIds.includes(currentUser.areaId);
+    }
+    return agent.esPublico !== false;
   });
 
   const handleSelectToEdit = (agent) => {
@@ -251,9 +287,19 @@ export default function AgentManagerModal({
     setNombre(agent.nombre);
     setDescripcion(agent.descripcion || '');
     setInstrucciones(agent.instrucciones || '');
-    setEsPublico(agent.esPublico !== false);
     setCreadoPor(agent.creadoPor || currentUser?.id || 'user-super-auditor');
     setCreadorNombre(agent.creadorNombre || currentUser?.nombre || 'Auditor');
+
+    if (Array.isArray(agent.allowedAreaIds) && agent.allowedAreaIds.length > 0) {
+      setVisibilidadMode('CUSTOM');
+      setAllowedAreaIds(agent.allowedAreaIds);
+    } else if (agent.esPublico === false) {
+      setVisibilidadMode('PRIVATE');
+      setAllowedAreaIds([]);
+    } else {
+      setVisibilidadMode('PUBLIC');
+      setAllowedAreaIds([]);
+    }
   };
 
   const handleCreateNewAgent = () => {
@@ -262,9 +308,24 @@ export default function AgentManagerModal({
     setNombre('Nuevo Agente Auditor');
     setDescripcion('Agente personalizado de auditoría documental');
     setInstrucciones('');
-    setEsPublico(true);
+    setVisibilidadMode('PUBLIC');
+    setAllowedAreaIds([]);
     setCreadoPor(currentUser?.id || 'user-super-auditor');
     setCreadorNombre(currentUser?.nombre || 'Auditor');
+  };
+
+  const handleToggleArea = (areaId) => {
+    setAllowedAreaIds(prev => 
+      prev.includes(areaId) ? prev.filter(id => id !== areaId) : [...prev, areaId]
+    );
+  };
+
+  const handleSelectAllAreas = () => {
+    setAllowedAreaIds(availableAreas.map(a => a.id));
+  };
+
+  const handleDeselectAllAreas = () => {
+    setAllowedAreaIds([]);
   };
 
   const handleDeleteAgent = (idToDelete, e) => {
@@ -320,6 +381,16 @@ export default function AgentManagerModal({
       return;
     }
 
+    if (visibilidadMode === 'CUSTOM' && allowedAreaIds.length === 0) {
+      setDialogState({
+        isOpen: true,
+        title: 'Áreas Requeridas',
+        message: 'Ha seleccionado visibilidad específica pero no ha marcado ninguna área. Por favor seleccione al menos un área o cambie a Público/Privado.',
+        type: 'WARNING'
+      });
+      return;
+    }
+
     let updated;
     const exists = agentsList.some(a => a.id === activeEditingId);
 
@@ -328,7 +399,8 @@ export default function AgentManagerModal({
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
       instrucciones,
-      esPublico,
+      esPublico: visibilidadMode === 'PUBLIC',
+      allowedAreaIds: visibilidadMode === 'CUSTOM' ? allowedAreaIds : [],
       creadoPor: creadoPor || currentUser?.id || 'user-super-auditor',
       creadorNombre: creadorNombre || currentUser?.nombre || 'Auditor',
       updatedAt: new Date().toISOString()
@@ -363,7 +435,7 @@ export default function AgentManagerModal({
             </div>
             <div>
               <h3 className="font-bold text-white text-base">Configuración de Agentes de Auditoría IA</h3>
-              <p className="text-xs text-slate-400">Cree, personalice y comparta las instrucciones del Agente Auditor que evaluará sus documentos</p>
+              <p className="text-xs text-slate-400">Cree, personalice y comparta las instrucciones del Agente Auditor con áreas específicas</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-all cursor-pointer">
@@ -378,7 +450,7 @@ export default function AgentManagerModal({
           <div className="md:col-span-4 bg-slate-950/60 border-r border-slate-800 p-4 space-y-3 flex flex-col justify-between overflow-y-auto custom-scrollbar">
             <div className="space-y-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Agentes Disponibles ({visibleAgentsList.length})</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Agentes ({visibleAgentsList.length})</span>
                 <button
                   onClick={handleCreateNewAgent}
                   className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-semibold bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20 transition-all cursor-pointer"
@@ -391,7 +463,8 @@ export default function AgentManagerModal({
               {visibleAgentsList.map((agent) => {
                 const isEditing = agent.id === activeEditingId;
                 const isSelectedForAudit = agent.id === selectedAgentId;
-                const isAgentPublic = agent.esPublico !== false;
+                const hasCustomAreas = Array.isArray(agent.allowedAreaIds) && agent.allowedAreaIds.length > 0;
+                const isAgentPrivate = agent.esPublico === false && !hasCustomAreas;
 
                 return (
                   <div
@@ -415,13 +488,18 @@ export default function AgentManagerModal({
                             Activo
                           </span>
                         )}
-                        {isAgentPublic ? (
-                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 flex items-center gap-0.5" title="Visible para todos">
-                            <Globe className="w-2.5 h-2.5" />
+                        {hasCustomAreas ? (
+                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20 flex items-center gap-0.5" title={`Visible para ${agent.allowedAreaIds.length} áreas específicas`}>
+                            <Users className="w-2.5 h-2.5" />
+                            <span>{agent.allowedAreaIds.length}</span>
+                          </span>
+                        ) : isAgentPrivate ? (
+                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-0.5" title="Privado (Solo autor)">
+                            <Lock className="w-2.5 h-2.5" />
                           </span>
                         ) : (
-                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-0.5" title="Privado (Solo tú)">
-                            <Lock className="w-2.5 h-2.5" />
+                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-0.5" title="Visible para todos">
+                            <Globe className="w-2.5 h-2.5" />
                           </span>
                         )}
                       </div>
@@ -431,9 +509,9 @@ export default function AgentManagerModal({
                       <p className="text-[11px] text-slate-400 line-clamp-1">{agent.descripcion}</p>
                     )}
 
-                    {!isAgentPublic && agent.creadorNombre && (
-                      <p className="text-[10px] text-amber-400/80 flex items-center gap-1">
-                        <User className="w-2.5 h-2.5" />
+                    {agent.creadorNombre && (
+                      <p className="text-[10px] text-slate-400/80 flex items-center gap-1">
+                        <User className="w-2.5 h-2.5 text-slate-500" />
                         <span>Por: {agent.creadorNombre}</span>
                       </p>
                     )}
@@ -473,62 +551,148 @@ export default function AgentManagerModal({
                 />
               </div>
 
-              {/* Selector de Visibilidad (Público vs Privado) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-200 mb-1.5 flex items-center justify-between">
-                  <span>Visibilidad y Permisos</span>
+              {/* Selector de Visibilidad (3 Opciones: Público, Áreas Específicas, Privado) */}
+              <div className="space-y-2.5">
+                <label className="block text-xs font-bold text-slate-200 flex items-center justify-between">
+                  <span>Visibilidad y Permisos de Acceso</span>
                   <span className="text-[10.5px] font-normal text-slate-400">
-                    {esPublico ? '🌐 Visible para todos los usuarios' : '🔒 Solo visible para mi usuario'}
+                    {visibilidadMode === 'PUBLIC' && '🌐 Visible para todos los auditores'}
+                    {visibilidadMode === 'CUSTOM' && `👥 Compartido con ${allowedAreaIds.length} áreas seleccionadas`}
+                    {visibilidadMode === 'PRIVATE' && '🔒 Solo visible para mi usuario'}
                   </span>
                 </label>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {/* Opción 1: Público */}
                   <button
                     type="button"
-                    onClick={() => setEsPublico(true)}
-                    className={`p-3 rounded-2xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
-                      esPublico
-                        ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 ring-1 ring-emerald-500/30'
+                    onClick={() => setVisibilidadMode('PUBLIC')}
+                    className={`p-2.5 rounded-2xl border text-left transition-all flex items-start gap-2 cursor-pointer ${
+                      visibilidadMode === 'PUBLIC'
+                        ? 'bg-emerald-500/10 border-emerald-500/60 text-emerald-300 ring-1 ring-emerald-500/30'
                         : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
-                    <div className={`p-2 rounded-xl shrink-0 ${esPublico ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
-                      <Globe className="w-4 h-4" />
+                    <div className={`p-1.5 rounded-xl shrink-0 ${visibilidadMode === 'PUBLIC' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+                      <Globe className="w-3.5 h-3.5" />
                     </div>
-                    <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span>Público (Todos)</span>
-                        {esPublico && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white flex items-center gap-1">
+                        <span>Público</span>
+                        {visibilidadMode === 'PUBLIC' && <Check className="w-3 h-3 text-emerald-400" />}
                       </div>
-                      <p className="text-[10.5px] text-slate-400 leading-tight mt-0.5">
-                        Todos los auditores de cualquier área podrán ver y usar este agente.
+                      <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                        Todos los auditores de cualquier área.
                       </p>
                     </div>
                   </button>
 
+                  {/* Opción 2: Áreas Específicas */}
                   <button
                     type="button"
-                    onClick={() => setEsPublico(false)}
-                    className={`p-3 rounded-2xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
-                      !esPublico
-                        ? 'bg-amber-500/10 border-amber-500/50 text-amber-300 ring-1 ring-amber-500/30'
+                    onClick={() => setVisibilidadMode('CUSTOM')}
+                    className={`p-2.5 rounded-2xl border text-left transition-all flex items-start gap-2 cursor-pointer ${
+                      visibilidadMode === 'CUSTOM'
+                        ? 'bg-blue-500/10 border-blue-500/60 text-blue-300 ring-1 ring-blue-500/30'
                         : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
-                    <div className={`p-2 rounded-xl shrink-0 ${!esPublico ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-slate-500'}`}>
-                      <Lock className="w-4 h-4" />
+                    <div className={`p-1.5 rounded-xl shrink-0 ${visibilidadMode === 'CUSTOM' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
+                      <Users className="w-3.5 h-3.5" />
                     </div>
-                    <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span>Privado (Solo tú)</span>
-                        {!esPublico && <Check className="w-3.5 h-3.5 text-amber-400" />}
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white flex items-center gap-1">
+                        <span>Específicos</span>
+                        {visibilidadMode === 'CUSTOM' && <Check className="w-3 h-3 text-blue-400" />}
                       </div>
-                      <p className="text-[10.5px] text-slate-400 leading-tight mt-0.5">
-                        Solo tu usuario ({currentUser?.nombre || 'autor'}) tendrá acceso a este agente.
+                      <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                        Solo áreas / usuarios elegidos.
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Opción 3: Privado */}
+                  <button
+                    type="button"
+                    onClick={() => setVisibilidadMode('PRIVATE')}
+                    className={`p-2.5 rounded-2xl border text-left transition-all flex items-start gap-2 cursor-pointer ${
+                      visibilidadMode === 'PRIVATE'
+                        ? 'bg-amber-500/10 border-amber-500/60 text-amber-300 ring-1 ring-amber-500/30'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-xl shrink-0 ${visibilidadMode === 'PRIVATE' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-slate-500'}`}>
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white flex items-center gap-1">
+                        <span>Privado</span>
+                        {visibilidadMode === 'PRIVATE' && <Check className="w-3 h-3 text-amber-400" />}
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                        Solo tú y el Super Auditor.
                       </p>
                     </div>
                   </button>
                 </div>
+
+                {/* Panel de Selección de Áreas / Usuarios (Visible cuando visibilidadMode === 'CUSTOM') */}
+                {visibilidadMode === 'CUSTOM' && (
+                  <div className="bg-slate-950/80 border border-blue-500/30 rounded-2xl p-3.5 space-y-2.5 animate-fadeIn">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Seleccione los Auditores / Áreas con Acceso ({allowedAreaIds.length}/{availableAreas.length})</span>
+                      </span>
+                      <div className="flex items-center gap-2 text-[10.5px]">
+                        <button
+                          type="button"
+                          onClick={handleSelectAllAreas}
+                          className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer"
+                        >
+                          Marcar Todas
+                        </button>
+                        <span className="text-slate-600">•</span>
+                        <button
+                          type="button"
+                          onClick={handleDeselectAllAreas}
+                          className="text-slate-400 hover:text-slate-200 cursor-pointer"
+                        >
+                          Desmarcar
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                      {availableAreas.map(area => {
+                        const isChecked = allowedAreaIds.includes(area.id);
+                        return (
+                          <div
+                            key={area.id}
+                            onClick={() => handleToggleArea(area.id)}
+                            className={`p-2 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                              isChecked
+                                ? 'bg-blue-500/15 border-blue-500/50 text-white'
+                                : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isChecked ? (
+                                <CheckSquare className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                              ) : (
+                                <Square className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                              )}
+                              <span className="text-xs truncate font-medium">{area.nombre}</span>
+                            </div>
+                            <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0">
+                              {area.id}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
