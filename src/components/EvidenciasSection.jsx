@@ -681,13 +681,25 @@ export default function EvidenciasSection({
               )}
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-medium text-slate-400">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <span className="text-[11px] font-semibold text-slate-400">
                     Contenido Extraído e Indexado para la Auditoría ({selectedPreviewDoc.contenido?.length || 0} fragmentos):
                   </span>
                   {selectedPreviewDoc.ocrApplied && (
-                    <span className="text-[10px] text-emerald-400 font-mono font-semibold">
-                      ✓ Transcrito con Visión IA {selectedPreviewDoc.ocrTargetPages && selectedPreviewDoc.ocrTargetPages !== 'ALL' ? `(Hojas: ${Array.isArray(selectedPreviewDoc.ocrTargetPages) ? selectedPreviewDoc.ocrTargetPages.join(', ') : selectedPreviewDoc.ocrTargetPages})` : ''}
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10.5px] font-medium flex items-center gap-1.5 shadow-sm">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      <span>Indexado con Visión IA ({(() => {
+                        const targetPages = selectedPreviewDoc.ocrTargetPages;
+                        const totalPages = selectedPreviewDoc.paginas || selectedPreviewDoc.contenido?.length || 1;
+                        if (!targetPages || targetPages === 'ALL') return 'Documento Completo';
+                        if (Array.isArray(targetPages)) {
+                          if (targetPages.length === 0 || targetPages.length >= totalPages) return 'Documento Completo';
+                          if (targetPages.length === 1) return `Pág. ${targetPages[0]}`;
+                          if (targetPages.length <= 4) return `Págs. ${targetPages.join(', ')}`;
+                          return `${targetPages.length} páginas procesadas`;
+                        }
+                        return String(targetPages);
+                      })()})</span>
                     </span>
                   )}
                 </div>
