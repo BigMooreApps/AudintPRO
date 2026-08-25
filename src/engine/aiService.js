@@ -130,23 +130,22 @@ Debes responder OBLIGATORIAMENTE en formato JSON con esta estructura exacta:
 
   // Consultar dinámicamente los modelos soportados por la API key
   const availableModels = await getAvailableGeminiModels(apiKey);
-  const selected = modelName || 'gemini-2.0-flash';
+  const selected = modelName || 'gemini-1.5-flash';
   
   const modelsPool = [];
   if (selected && availableModels.includes(selected)) {
     modelsPool.push(selected);
   }
   
-  // Modelos estables de respaldo
-  const fallbackList = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro'];
-  fallbackList.forEach(m => {
-    if (!modelsPool.includes(m) && availableModels.includes(m)) {
+  // Agregar los demás modelos soportados por la API key
+  availableModels.forEach(m => {
+    if (!modelsPool.includes(m)) {
       modelsPool.push(m);
     }
   });
 
   if (modelsPool.length === 0) {
-    modelsPool.push('gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro');
+    modelsPool.push('gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro');
   }
 
   let lastError = null;
@@ -177,22 +176,29 @@ Debes responder OBLIGATORIAMENTE en formato JSON con esta estructura exacta:
         }
       }
 
+      const errorText = await response.text();
+      let parsedMessage = errorText;
+      try {
+        const errJson = JSON.parse(errorText);
+        parsedMessage = errJson?.error?.message || errorText;
+      } catch (_) {}
+
       // Si es 429 (Cuota saturada) o 503 (Servicio temporalmente sobrecargado), pausar brevemente y probar siguiente
       if (response.status === 429 || response.status === 503) {
-        console.warn(`Modelo ${currentModel} respondió con ${response.status}. Pausando 1.5s y probando siguiente modelo estable...`);
-        lastError = new Error(`Límite ${response.status} en ${currentModel}. Probando siguiente modelo...`);
+        console.warn(`[${currentModel}] respondió con ${response.status} (${parsedMessage}). Pausando 1.5s y probando siguiente modelo...`);
+        lastError = new Error(`Límite ${response.status} en ${currentModel}: ${parsedMessage}`);
         await new Promise(r => setTimeout(r, 1500));
         continue;
       }
 
-      // Si es 404, continuar al siguiente modelo
+      // Si es 404, registrar motivo exacto y continuar al siguiente modelo
       if (response.status === 404) {
-        console.warn(`Modelo ${currentModel} no disponible (404). Probando alternativa...`);
+        console.warn(`[${currentModel}] 404: ${parsedMessage}. Probando alternativa...`);
+        lastError = new Error(`Modelo ${currentModel} no encontrado (404): ${parsedMessage}`);
         continue;
       }
 
-      const errorBody = await response.text();
-      throw new Error(`Error de la API (${response.status}): ${errorBody}`);
+      throw new Error(`Error de la API (${response.status}): ${parsedMessage}`);
 
     } catch (err) {
       lastError = err;

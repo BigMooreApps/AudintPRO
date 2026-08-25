@@ -71,19 +71,15 @@ export async function getAvailableGeminiModels(apiKey) {
     if (response.ok) {
       const data = await response.json();
       if (Array.isArray(data.models)) {
-        const allowedPrefixes = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro', 'gemini-2.0-flash-lite'];
         const validModels = data.models
           .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
           .map(m => m.name.replace(/^models\//, ''))
           .filter(name => {
             const isInvalid = name.includes('tts') || 
-                              name.includes('gemma') || 
                               name.includes('embedding') || 
                               name.includes('imagen') || 
-                              name.includes('aqa') ||
-                              name.includes('2.5');
-            if (isInvalid) return false;
-            return allowedPrefixes.some(pref => name.startsWith(pref));
+                              name.includes('aqa');
+            return !isInvalid && (name.startsWith('gemini') || name.startsWith('gemma'));
           });
         
         if (validModels.length > 0) {
@@ -97,11 +93,14 @@ export async function getAvailableGeminiModels(apiKey) {
     console.warn('No se pudo listar modelos dinámicamente de Gemini:', e);
   }
 
-  // Lista de modelos oficiales estables
+  // Lista de modelos oficiales estables por compatibilidad universal
   return [
-    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
     'gemini-1.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-exp',
     'gemini-1.5-flash-8b',
+    'gemini-1.5-pro-latest',
     'gemini-1.5-pro'
   ];
 }
