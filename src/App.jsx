@@ -133,8 +133,10 @@ export default function App() {
     }
     setCurrentUser(null);
     setShowInactivityModal(false);
-    if (message) {
-      setInactivityNotice(message);
+    if (typeof message === 'string' && message.trim().length > 0) {
+      setInactivityNotice(message.trim());
+    } else {
+      setInactivityNotice('');
     }
   };
 

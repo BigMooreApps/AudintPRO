@@ -107,7 +107,7 @@ export default function LoginScreen({
             Plataforma Integral de Auditorías Internas y Control de Conformidad Normativa
           </p>
 
-          {inactivityMessage && (
+          {typeof inactivityMessage === 'string' && inactivityMessage.trim().length > 0 && (
             <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-2xl text-amber-300 text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 animate-fadeIn">
               <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
               <span>{inactivityMessage}</span>

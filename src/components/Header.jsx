@@ -132,8 +132,8 @@ export default function Header({
 
             {/* Botón de Salir (Desktop) */}
             <button
-              onClick={onLogout}
-              className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/50 rounded-2xl transition-all group"
+              onClick={() => onLogout && onLogout()}
+              className="flex flex-col items-center justify-center w-16 h-14 bg-slate-950/70 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/50 rounded-2xl transition-all group cursor-pointer"
               title={`Cerrar sesión actual (${isSuperAuditor ? 'Super Auditor' : currentUser?.areaNombre})`}
             >
               <LogOut className="w-5 h-5 text-rose-400 group-hover:scale-110 group-hover:text-rose-300 transition-transform mb-1" />
@@ -158,8 +158,8 @@ export default function Header({
               </button>
             )}
             <button
-              onClick={onLogout}
-              className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-rose-400 hover:bg-rose-950/30 transition-all"
+              onClick={() => onLogout && onLogout()}
+              className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-rose-400 hover:bg-rose-950/30 transition-all cursor-pointer"
               title="Cerrar Sesión"
             >
               <LogOut className="w-4 h-4" />
