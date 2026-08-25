@@ -663,29 +663,26 @@ export default function AgentManagerModal({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
                       {availableAreas.map(area => {
                         const isChecked = allowedAreaIds.includes(area.id);
                         return (
                           <div
                             key={area.id}
                             onClick={() => handleToggleArea(area.id)}
-                            className={`p-2 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                            className={`p-2.5 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
                               isChecked
-                                ? 'bg-blue-500/15 border-blue-500/50 text-white'
-                                : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                                ? 'bg-blue-500/15 border-blue-500/60 text-white shadow-sm ring-1 ring-blue-500/30'
+                                : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-800/40'
                             }`}
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              {isChecked ? (
-                                <CheckSquare className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                              ) : (
-                                <Square className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                              )}
-                              <span className="text-xs truncate font-medium">{area.nombre}</span>
-                            </div>
-                            <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0">
-                              {area.id}
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-blue-400 shrink-0" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-500 shrink-0" />
+                            )}
+                            <span className="text-xs font-semibold leading-snug">
+                              {area.nombre}
                             </span>
                           </div>
                         );
