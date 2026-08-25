@@ -405,150 +405,129 @@ export default function ResultadosDashboard({
                       </ul>
                     </div>
 
-                    {/* SECCIÓN DE VALIDACIÓN Y COMENTARIOS DEL AUDITOR HUMANO */}
-                    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-inner">
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                        <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                          <h4 className="text-xs font-bold text-white">Validación y Dictamen del Auditor</h4>
-                        </div>
-
-                        {review.confirmado && (
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold flex items-center gap-1">
-                            <Check className="w-3 h-3" />
-                            <span>Dictamen Confirmado</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Selector de Estado del Auditor */}
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-semibold text-slate-400">
-                          Decisión de Conformidad del Auditor:
-                        </label>
-                        <div className="flex flex-wrap items-center gap-2">
+                    {/* BARRA COMPACTA Y MODERNA DE VALIDACIÓN DEL AUDITOR */}
+                    <div className="pt-3 border-t border-slate-800/80 space-y-2.5">
+                      
+                      <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-900/80 p-2 sm:p-2.5 rounded-2xl border border-slate-800/90 shadow-sm">
+                        
+                        {/* Selector Segmentado de Conformidad */}
+                        <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleUpdateReview(itemKey, 'estado', 'CUMPLE')}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                               review.estado === 'CUMPLE'
-                                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10'
-                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
                             }`}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Conforme (CUMPLE)</span>
+                            <span>Conforme</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handleUpdateReview(itemKey, 'estado', 'NO CUMPLE')}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                               review.estado === 'NO CUMPLE'
-                                ? 'bg-rose-500/20 border-rose-500 text-rose-300 shadow-md shadow-rose-500/10'
-                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
                             }`}
                           >
                             <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                            <span>No Conforme (NO CUMPLE)</span>
+                            <span>No Conforme</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handleUpdateReview(itemKey, 'estado', 'OBSERVACION')}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                               review.estado === 'OBSERVACION'
-                                ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md shadow-amber-500/10'
-                                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-200'
                             }`}
                           >
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                            <span>Observación / Oportunidad de Mejora</span>
+                            <span>Observación</span>
                           </button>
                         </div>
+
+                        {/* Input de Comentario / Conclusión en Línea */}
+                        <div className="flex-1 min-w-[200px]">
+                          <div className="relative">
+                            <MessageSquare className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              value={review.comentario || ''}
+                              onChange={(e) => handleUpdateReview(itemKey, 'comentario', e.target.value)}
+                              placeholder="Comentario o conclusión del auditor (opcional)..."
+                              className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none transition-all"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Botón Compacto Confirmar */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleConfirm(itemKey)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 active:scale-95 ${
+                            review.confirmado
+                              ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20'
+                          }`}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{review.confirmado ? 'Confirmado ✓' : 'Confirmar'}</span>
+                        </button>
+
                       </div>
 
-                      {/* Textarea de Comentarios del Auditor */}
-                      <div className="space-y-1.5">
-                        <label className="block text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
-                          <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Comentarios Técnicos y Conclusión del Auditor:</span>
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={review.comentario}
-                          onChange={(e) => handleUpdateReview(itemKey, 'comentario', e.target.value)}
-                          placeholder="Ingrese sus comentarios técnicos, conclusiones o justificación de auditoría para este subnumeral..."
-                          className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 leading-relaxed"
-                        />
-                      </div>
-
-                      {/* CAMPOS ADICIONALES PARA NO CONFORMIDADES U OBSERVACIONES: FECHA DE REVISIÓN Y PLAN DE ACCIÓN */}
+                      {/* Compromiso / Plan de Acción desplegable compacto solo cuando es No Conforme u Observación */}
                       {requiresActionPlan && (
-                        <div className="bg-slate-950 p-4 rounded-xl border border-amber-500/30 space-y-3 animate-fadeIn">
-                          <div className="flex items-center gap-2 text-amber-400 border-b border-slate-850 pb-2">
-                            <ShieldAlert className="w-4 h-4 text-amber-400" />
-                            <span className="text-xs font-bold">Compromiso de Acción Correctiva / Oportunidad de Mejora</span>
+                        <div className="p-3 bg-slate-950/90 rounded-2xl border border-amber-500/30 space-y-2.5 animate-fadeIn text-xs">
+                          <div className="flex items-center gap-1.5 text-amber-400 font-semibold text-[11px]">
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                            <span>Plan de Acción / Compromiso de Subsanación:</span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                             <div>
-                              <label className="block text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-                                <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                                <span>Fecha Límite de Revisión / Compromiso:</span>
+                              <label className="block text-[10px] text-slate-400 mb-1 flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-indigo-400" />
+                                <span>Fecha Límite:</span>
                               </label>
                               <input
                                 type="date"
                                 value={review.fechaCompromiso || ''}
                                 onChange={(e) => handleUpdateReview(itemKey, 'fechaCompromiso', e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
                               />
                             </div>
 
                             <div>
-                              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                                Responsable de la Subsanación (Área / Cargo):
-                              </label>
+                              <label className="block text-[10px] text-slate-400 mb-1">Responsable:</label>
                               <input
                                 type="text"
                                 value={review.responsableAccion || ''}
                                 onChange={(e) => handleUpdateReview(itemKey, 'responsableAccion', e.target.value)}
-                                placeholder="Ej. Líder de Calidad / Metrología"
-                                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                                placeholder="Ej. Líder de Calidad"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-1">Acción Propuesta:</label>
+                              <input
+                                type="text"
+                                value={review.accionPropuesta || ''}
+                                onChange={(e) => handleUpdateReview(itemKey, 'accionPropuesta', e.target.value)}
+                                placeholder="Plan de subsanación..."
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                               />
                             </div>
                           </div>
-
-                          <div className="space-y-1">
-                            <label className="block text-[11px] font-semibold text-slate-400">
-                              Plan de Acción Correctiva Propuesto:
-                            </label>
-                            <textarea
-                              rows={2}
-                              value={review.accionPropuesta || ''}
-                              onChange={(e) => handleUpdateReview(itemKey, 'accionPropuesta', e.target.value)}
-                              placeholder="Describa el plan de subsanación o acción acordada para subsanar el hallazgo..."
-                              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                            />
-                          </div>
                         </div>
                       )}
-
-                      {/* Botón de Confirmación */}
-                      <div className="flex justify-end pt-1">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleConfirm(itemKey)}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all ${
-                            review.confirmado
-                              ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30 transform active:scale-95'
-                          }`}
-                        >
-                          <Check className="w-4 h-4" />
-                          <span>{review.confirmado ? 'Dictamen Confirmado ✓' : 'Confirmar Dictamen'}</span>
-                        </button>
-                      </div>
 
                     </div>
 
