@@ -63,6 +63,16 @@ export async function getAvailableGeminiModels(apiKey) {
   const cleanKey = (apiKey || '').trim();
   if (!cleanKey) return [];
 
+  // Modelos de producción prioritarios con alta cuota gratuita
+  const PRIORITY_ORDER = [
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash-8b',
+    'gemini-2.0-flash',
+    'gemini-1.5-pro',
+    'gemini-1.5-pro-latest'
+  ];
+
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanKey)}`, {
       headers: { 'x-goog-api-key': cleanKey }
@@ -71,21 +81,38 @@ export async function getAvailableGeminiModels(apiKey) {
     if (response.ok) {
       const data = await response.json();
       if (Array.isArray(data.models)) {
-        const validModels = data.models
+        const availableFromGoogle = data.models
           .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
           .map(m => m.name.replace(/^models\//, ''))
           .filter(name => {
+            // Excluir estrictamente modelos experimentales, obsoletos, TTS, y Gemma (límite 16k tokens)
             const isInvalid = name.includes('tts') || 
                               name.includes('embedding') || 
                               name.includes('imagen') || 
-                              name.includes('aqa');
-            return !isInvalid && (name.startsWith('gemini') || name.startsWith('gemma'));
+                              name.includes('aqa') ||
+                              name.includes('gemma') ||
+                              name.includes('2.5-pro') ||
+                              name.includes('2.5-flash');
+            return !isInvalid && name.startsWith('gemini');
           });
-        
-        if (validModels.length > 0) {
-          cachedGeminiModels = validModels;
+
+        // Ordenar dando prioridad a los modelos estándar de alta cuota (1.5-flash)
+        const sortedModels = [];
+        PRIORITY_ORDER.forEach(p => {
+          if (availableFromGoogle.includes(p)) {
+            sortedModels.push(p);
+          }
+        });
+        availableFromGoogle.forEach(m => {
+          if (!sortedModels.includes(m)) {
+            sortedModels.push(m);
+          }
+        });
+
+        if (sortedModels.length > 0) {
+          cachedGeminiModels = sortedModels;
           lastModelFetchTime = now;
-          return validModels;
+          return sortedModels;
         }
       }
     }
@@ -93,16 +120,7 @@ export async function getAvailableGeminiModels(apiKey) {
     console.warn('No se pudo listar modelos dinámicamente de Gemini:', e);
   }
 
-  // Lista de modelos oficiales estables por compatibilidad universal
-  return [
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-exp',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-pro-latest',
-    'gemini-1.5-pro'
-  ];
+  return PRIORITY_ORDER;
 }
 
 /**
