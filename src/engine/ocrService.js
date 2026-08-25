@@ -238,7 +238,7 @@ export async function renderImageFileToBase64(fileOrBlob) {
 }
 
 /**
- * Detecta qué páginas tienen texto escaso (< 250 caracteres), escaneos o diagramas pendientes
+ * Detecta qué páginas tienen imágenes, diagramas, organigramas, texto escaso o escaneos
  */
 export function getIncompleteOrDiagramPages(doc) {
   if (!doc || !Array.isArray(doc.contenido) || doc.contenido.length === 0) {
@@ -252,13 +252,24 @@ export function getIncompleteOrDiagramPages(doc) {
     const pNum = match ? parseInt(match[1], 10) : idx + 1;
     const txt = (item.texto || '').trim();
 
-    // Si tiene menos de 250 caracteres, está vacío o contiene marcadores de escaneo
-    if (txt.length < 250 || txt.includes('[Página') || txt.includes('No se detectó texto') || txt.includes('[Escaneado')) {
+    // 1. Si la página tiene imágenes incrustadas detectadas por el renderizador de PDF
+    const hasEmbeddedImage = item.hasImages === true;
+
+    // 2. Si el texto es escaso (< 700 caracteres) considerando que encabezados/pies ocupan ~250 chars
+    const isShortText = txt.length < 700;
+
+    // 3. Si contiene palabras clave de elementos gráficos, diagramas, organigramas o tablas (< 1200 chars)
+    const hasDiagramKeywords = /(mapa|proceso|diagrama|organigrama|flujograma|figura|esquema|gráfico|estructura|tabla|interacción|matriz)/i.test(txt) && txt.length < 1200;
+
+    // 4. Si contiene etiquetas de escaneo o no texto directo
+    const isScanMarker = txt.includes('[Página') || txt.includes('No se detectó') || txt.includes('[Escaneado') || txt.includes('Pendiente de análisis');
+
+    if (hasEmbeddedImage || isShortText || hasDiagramKeywords || isScanMarker) {
       incomplete.push(pNum);
     }
   });
 
-  return incomplete.length > 0 ? incomplete : [1];
+  return incomplete.length > 0 ? incomplete : Array.from({ length: doc?.paginas || 1 }, (_, i) => i + 1);
 }
 
 /**

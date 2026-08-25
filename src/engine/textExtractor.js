@@ -80,7 +80,23 @@ async function parsePDF(file) {
     try {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str || '').join(' ').trim();
+      const rawText = textContent.items.map(item => item.str || '').join(' ').trim();
+      const pageText = cleanExtractedText(rawText);
+
+      let hasImages = false;
+      try {
+        const ops = await page.getOperatorList();
+        // Operadores de imagen en PDF.js: paintImageXObject, paintInlineImageXObject, paintImageMaskXObject (valores típicos 85, 86, 87)
+        const imageOps = [
+          pdfjsLib.OPS?.paintImageXObject,
+          pdfjsLib.OPS?.paintInlineImageXObject,
+          pdfjsLib.OPS?.paintImageMaskXObject,
+          85, 86, 87
+        ].filter(Boolean);
+        hasImages = ops.fnArray.some(op => imageOps.includes(op));
+      } catch (opErr) {
+        // Fallback silencioso
+      }
 
       if (pageText && pageText.length > 5) {
         totalCharsExtracted += pageText.length;
@@ -98,11 +114,29 @@ async function parsePDF(file) {
         contenido.push({
           seccion: detectedSection,
           pagina: `${i}/${numPages}`,
-          texto: cleanExtractedText(pageText)
+          texto: pageText,
+          hasImages: hasImages,
+          charCount: pageText.length
+        });
+      } else {
+        // Página sin texto directo (100% imagen/escaneo)
+        contenido.push({
+          seccion: `Página ${i}`,
+          pagina: `${i}/${numPages}`,
+          texto: `[Página ${i}: Imagen o gráfico escaneado sin capa de texto directo]`,
+          hasImages: true,
+          charCount: 0
         });
       }
     } catch (pageErr) {
       console.warn(`No se pudo extraer el texto de la página ${i}:`, pageErr);
+      contenido.push({
+        seccion: `Página ${i}`,
+        pagina: `${i}/${numPages}`,
+        texto: `[Página ${i}: Pendiente de análisis visual con IA]`,
+        hasImages: true,
+        charCount: 0
+      });
     }
   }
 

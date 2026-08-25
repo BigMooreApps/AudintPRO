@@ -616,19 +616,6 @@ export default function EvidenciasSection({
 
                 {/* Botón de acción de OCR / Visión con IA */}
                 <div className="flex items-center gap-2">
-                  {(selectedPreviewDoc.paginas > 1 || (selectedPreviewDoc.contenido && selectedPreviewDoc.contenido.length > 1)) && (
-                    <button
-                      type="button"
-                      onClick={() => handleTriggerAIOcr(selectedPreviewDoc, true)}
-                      disabled={ocrLoadingState.activeDocId === selectedPreviewDoc.id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-all active:scale-95 shadow-sm"
-                      title="Elegir hojas específicas a leer con IA"
-                    >
-                      <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Elegir Hojas...</span>
-                    </button>
-                  )}
-
                   <button
                     type="button"
                     onClick={() => handleTriggerAIOcr(selectedPreviewDoc)}
@@ -1004,18 +991,6 @@ export default function EvidenciasSection({
                   )}
                   <span>{copiedDocId === selectedPreviewDoc.id ? '¡Copiado!' : 'Copiar'}</span>
                 </button>
-
-                {(selectedPreviewDoc.paginas > 1 || (selectedPreviewDoc.contenido && selectedPreviewDoc.contenido.length > 1)) && (
-                  <button
-                    type="button"
-                    onClick={() => handleTriggerAIOcr(selectedPreviewDoc, true)}
-                    disabled={ocrLoadingState.activeDocId === selectedPreviewDoc.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition-all active:scale-95 shadow-sm"
-                  >
-                    <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Elegir Hojas</span>
-                  </button>
-                )}
 
                 <button
                   type="button"
