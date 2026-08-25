@@ -253,22 +253,31 @@ export default function App() {
 
   // Crear una nueva auditoría
   const handleCreateAudit = (formData) => {
-    const newAudit = createDefaultAuditCycle({
-      codigo: formData.codigo,
-      nombre: formData.nombre,
-      tipo: formData.tipo,
-      laboratorio: formData.laboratorio,
-      auditorLider: formData.auditorLider,
-      fechaInicio: formData.fechaInicio,
-      fechaFin: formData.fechaFin,
-      estado: formData.estado,
-      observacionesGenerales: formData.observacionesGenerales,
-      areas: formData.customAreas || (formData.cloneFromCurrent ? areas : DEFAULT_AREAS),
-      mapeoNumerales: formData.customMapeo || (formData.cloneFromCurrent ? mapeoNumerales : DEFAULT_NUMERALES_MAPEO),
-      evaluationsHistory: {},
-      evidencias: [],
-      auditResult: null
-    });
+    let newAudit = null;
+    if (formData.id && formData.areas && formData.mapeoNumerales) {
+      newAudit = {
+        ...formData,
+        createdAt: formData.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    } else {
+      newAudit = createDefaultAuditCycle({
+        codigo: formData.codigo,
+        nombre: formData.nombre,
+        tipo: formData.tipo,
+        laboratorio: formData.laboratorio,
+        auditorLider: formData.auditorLider,
+        fechaInicio: formData.fechaInicio,
+        fechaFin: formData.fechaFin,
+        estado: formData.estado,
+        observacionesGenerales: formData.observacionesGenerales,
+        areas: formData.customAreas || (formData.cloneFromCurrent ? areas : DEFAULT_AREAS),
+        mapeoNumerales: formData.customMapeo || (formData.cloneFromCurrent ? mapeoNumerales : DEFAULT_NUMERALES_MAPEO),
+        evaluationsHistory: {},
+        evidencias: [],
+        auditResult: null
+      });
+    }
 
     const updatedAudits = [...auditCycles, newAudit];
     setAuditCycles(updatedAudits);
@@ -299,6 +308,9 @@ export default function App() {
     // Si la auditoría editada es la activa, sincronizar estados en memoria
     if (activeAuditId === auditId) {
       if (updatedData.areas) setAreasState(updatedData.areas);
+      if (updatedData.evaluationsHistory !== undefined) setEvaluationsHistoryState(updatedData.evaluationsHistory);
+      if (updatedData.evidencias !== undefined) setEvidencias(updatedData.evidencias);
+      if (updatedData.auditResult !== undefined) setAuditResult(updatedData.auditResult);
       if (updatedData.mapeoNumerales) {
         setMapeoNumeralesState(updatedData.mapeoNumerales);
         if (currentUser?.role === 'AUDITOR' && currentUser.areaId) {

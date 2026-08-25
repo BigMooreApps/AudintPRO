@@ -29,7 +29,8 @@ import {
   Filter,
   CheckSquare,
   Square,
-  KeyRound
+  KeyRound,
+  RotateCcw
 } from 'lucide-react';
 import { AUDIT_TYPES, createDefaultAuditCycle } from '../engine/auditCyclesService';
 import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO, compareNumeralCodes } from '../data/defaultMapeo';
@@ -333,6 +334,51 @@ export default function AuditoriasModal({
       ...audit,
       estado: nuevoEstado,
       fechaFin: nuevoEstado === 'CERRADA' && !audit.fechaFin ? new Date().toISOString().split('T')[0] : audit.fechaFin
+    });
+  };
+
+  // Duplicar auditoría completa (clona áreas, mapeo y parámetros generales)
+  const handleDuplicateAudit = (audit) => {
+    const count = (auditCycles || []).length + 1;
+    const currentYear = new Date().getFullYear();
+    const newAudit = {
+      ...audit,
+      id: `audit-${Date.now()}`,
+      codigo: `${audit.codigo || `AUD-${currentYear}`}-C${count}`,
+      nombre: `${audit.nombre} (Copia)`,
+      fechaInicio: new Date().toISOString().split('T')[0],
+      fechaFin: '',
+      estado: 'EN_PROCESO',
+      evaluationsHistory: {},
+      evidencias: [],
+      auditResult: null,
+      areas: (audit.areas || DEFAULT_AREAS).map(a => ({ ...a })),
+      mapeoNumerales: (audit.mapeoNumerales || DEFAULT_NUMERALES_MAPEO).map(n => ({ ...n, areaIds: [...(n.areaIds || [])] })),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    onCreateAudit(newAudit);
+  };
+
+  // Reiniciar auditoría de ceros con doble confirmación
+  const handleResetAudit = (audit) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: `¿Reiniciar de ceros "${audit.nombre}"?`,
+      message: `Esta acción limpiará todas las evaluaciones registradas, dictámenes del auditor y evidencias asociadas a este ciclo. Las áreas, auditores y el mapeo de numerales se mantendrán intactos para comenzar una nueva ejecución limpia.`,
+      type: 'WARNING',
+      confirmText: 'Sí, reiniciar a ceros',
+      cancelText: 'Cancelar',
+      onConfirm: () => {
+        onUpdateAudit(audit.id, {
+          evaluationsHistory: {},
+          evidencias: [],
+          auditResult: null,
+          estado: 'EN_PROCESO',
+          fechaFin: ''
+        });
+      }
     });
   };
 
@@ -1012,22 +1058,40 @@ export default function AuditoriasModal({
                         </div>
 
                         {/* Botones de Acción */}
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           
                           {/* Seleccionar / Abrir esta Auditoría (Siempre Visible) */}
                           <button
                             onClick={() => onSelectAudit(audit.id)}
-                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all transform active:scale-95"
+                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all transform active:scale-95 cursor-pointer"
                             title="Abrir esta auditoría e ir al Dashboard Principal"
                           >
                             <Play className="w-3.5 h-3.5 fill-white" />
                             <span>Abrir Auditoría</span>
                           </button>
 
+                          {/* Duplicar Auditoría */}
+                          <button
+                            onClick={() => handleDuplicateAudit(audit)}
+                            className="p-2 bg-slate-900 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/40 text-slate-400 hover:text-indigo-300 rounded-xl transition-all cursor-pointer"
+                            title="Duplicar auditoría (clona la configuración, áreas y numerales en un nuevo ciclo)"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Reiniciar Auditoría de Ceros */}
+                          <button
+                            onClick={() => handleResetAudit(audit)}
+                            className="p-2 bg-slate-900 hover:bg-amber-950/40 border border-slate-800 hover:border-amber-500/40 text-slate-400 hover:text-amber-300 rounded-xl transition-all cursor-pointer"
+                            title="Reiniciar esta auditoría de ceros (limpia evidencias y evaluaciones conservando la estructura)"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+
                           {/* Cerrar o Reabrir Ciclo */}
                           <button
                             onClick={() => handleToggleEstado(audit)}
-                            className={`p-2 rounded-xl border text-xs font-medium transition-all ${
+                            className={`p-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
                               isClosed
                                 ? 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white'
                                 : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
@@ -1040,7 +1104,7 @@ export default function AuditoriasModal({
                           {/* Editar (Abre el wizard de 3 pasos) */}
                           <button
                             onClick={() => handleStartEdit(audit)}
-                            className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-300 rounded-xl transition-all"
+                            className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-300 rounded-xl transition-all cursor-pointer"
                             title="Editar configuración completa de esta auditoría (3 pasos)"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
@@ -1050,7 +1114,7 @@ export default function AuditoriasModal({
                           {auditCycles.length > 1 && (
                             <button
                               onClick={() => triggerDeleteAudit(audit)}
-                              className="p-2 bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 rounded-xl transition-all"
+                              className="p-2 bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 rounded-xl transition-all cursor-pointer"
                               title="Eliminar este ciclo de auditoría"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
