@@ -27,7 +27,10 @@ import {
 import { 
   fetchAuditsFromSupabase, 
   syncAuditToSupabase, 
-  deleteAuditFromSupabase 
+  deleteAuditFromSupabase,
+  fetchAgentsFromSupabase,
+  syncAllAgentsToSupabase,
+  deleteAgentFromSupabase
 } from './services/supabaseClient';
 
 const STORAGE_KEY_AUTH_USER = 'AGENTE_PROMAX_AUTH_USER';
@@ -78,21 +81,36 @@ export default function App() {
   // Ref para evitar loops de sincronización
   const isSwitchingAuditRef = useRef(false);
 
-  // Sincronización en la nube con Supabase (Proyecto deiiaxwxlxzvsyigoexw)
+  // Sincronización en la nube con Supabase (Auditorías y Agentes IA)
   useEffect(() => {
+    // 1. Sincronizar Ciclos de Auditoría
     fetchAuditsFromSupabase().then(cloudAudits => {
       if (cloudAudits && cloudAudits.length > 0) {
         setAuditCycles(cloudAudits);
         saveAllAuditCycles(cloudAudits);
       } else {
-        // Si la base de datos remota está vacía, sincronizar los datos locales iniciales
         const localAudits = loadAllAuditCycles();
         localAudits.forEach(a => {
           syncAuditToSupabase(a);
         });
       }
     }).catch(err => {
-      console.warn('Conexión Supabase offline / fallback:', err);
+      console.warn('Conexión Supabase offline / fallback auditorias:', err);
+    });
+
+    // 2. Sincronizar Agentes de Auditoría IA Personalizados
+    fetchAgentsFromSupabase().then(cloudAgents => {
+      if (cloudAgents && cloudAgents.length > 0) {
+        setAgents(cloudAgents);
+        try {
+          localStorage.setItem('audint_pro_agents', JSON.stringify(cloudAgents));
+        } catch (e) {}
+      } else {
+        const localAgents = agents && agents.length > 0 ? agents : DEFAULT_AGENTS;
+        syncAllAgentsToSupabase(localAgents);
+      }
+    }).catch(err => {
+      console.warn('Conexión Supabase offline / fallback agentes:', err);
     });
   }, []);
 
@@ -414,6 +432,8 @@ export default function App() {
     } catch (e) {
       console.error('Error guardando agentes en localStorage', e);
     }
+    // Sincronización garantizada en la nube con Supabase
+    syncAllAgentsToSupabase(newAgentsList);
   };
 
   const handleSelectAgent = (agentId) => {
@@ -437,6 +457,7 @@ export default function App() {
     }
     const remaining = agents.filter(a => a.id !== agentId);
     handleSaveAgents(remaining);
+    deleteAgentFromSupabase(agentId);
     if (selectedAgentId === agentId) {
       handleSelectAgent(remaining[0].id);
     }
@@ -806,6 +827,7 @@ export default function App() {
         selectedAgentId={selectedAgentId}
         onSelectAgent={handleSelectAgent}
         onSaveAgents={handleSaveAgents}
+        currentUser={currentUser}
       />
 
       <AuditoresModal

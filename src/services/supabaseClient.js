@@ -178,3 +178,95 @@ export async function deleteAuditFromSupabase(auditId) {
     console.warn('Supabase deleteAudit aviso:', err.message);
   }
 }
+
+/**
+ * Carga todos los agentes personalizados guardados en Supabase
+ */
+export async function fetchAgentsFromSupabase() {
+  try {
+    const { data: agentsData, error } = await supabase
+      .from('agentes_ia')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    if (!agentsData || agentsData.length === 0) return null;
+
+    return agentsData.map(ag => ({
+      id: ag.id,
+      nombre: ag.nombre,
+      descripcion: ag.descripcion || '',
+      instrucciones: ag.instrucciones || '',
+      rol: ag.rol || 'AUDITOR',
+      activo: ag.activo !== false,
+      esPublico: ag.es_publico !== false,
+      creadoPor: ag.creado_por || 'SISTEMA',
+      creadorNombre: ag.creador_nombre || 'Sistema',
+      createdAt: ag.created_at,
+      updatedAt: ag.updated_at
+    }));
+  } catch (err) {
+    console.warn('Supabase fetchAgents aviso (usando fallback local):', err.message);
+    return null;
+  }
+}
+
+/**
+ * Guarda o sincroniza un agente individual en Supabase
+ */
+export async function syncAgentToSupabase(agent) {
+  if (!agent || !agent.id) return;
+  try {
+    await supabase.from('agentes_ia').upsert({
+      id: agent.id,
+      nombre: agent.nombre,
+      descripcion: agent.descripcion || '',
+      instrucciones: agent.instrucciones || '',
+      rol: agent.rol || 'AUDITOR',
+      activo: agent.activo !== false,
+      es_publico: agent.esPublico !== false,
+      creado_por: agent.creadoPor || null,
+      creador_nombre: agent.creadorNombre || null,
+      updated_at: new Date().toISOString()
+    });
+  } catch (err) {
+    console.warn('Supabase syncAgent aviso:', err.message);
+  }
+}
+
+/**
+ * Guarda una lista completa de agentes en Supabase
+ */
+export async function syncAllAgentsToSupabase(agentsList = []) {
+  if (!Array.isArray(agentsList) || agentsList.length === 0) return;
+  try {
+    const rows = agentsList.map(agent => ({
+      id: agent.id,
+      nombre: agent.nombre,
+      descripcion: agent.descripcion || '',
+      instrucciones: agent.instrucciones || '',
+      rol: agent.rol || 'AUDITOR',
+      activo: agent.activo !== false,
+      es_publico: agent.esPublico !== false,
+      creado_por: agent.creadoPor || null,
+      creador_nombre: agent.creadorNombre || null,
+      updated_at: new Date().toISOString()
+    }));
+    await supabase.from('agentes_ia').upsert(rows);
+  } catch (err) {
+    console.warn('Supabase syncAllAgents aviso:', err.message);
+  }
+}
+
+/**
+ * Elimina un agente en Supabase
+ */
+export async function deleteAgentFromSupabase(agentId) {
+  if (!agentId) return;
+  try {
+    await supabase.from('agentes_ia').delete().eq('id', agentId);
+  } catch (err) {
+    console.warn('Supabase deleteAgent aviso:', err.message);
+  }
+}
+

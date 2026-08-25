@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Sparkles, CheckCircle2, ShieldCheck, AlertCircle, RefreshCw, Cpu, Sliders, Check, Bot, Plus, Edit3, Trash2 } from 'lucide-react';
+import { Play, Sparkles, CheckCircle2, ShieldCheck, AlertCircle, RefreshCw, Cpu, Sliders, Check, Bot, Plus, Edit3, Trash2, Globe, Lock } from 'lucide-react';
 import { runAIAuditAnalysis } from '../engine/aiService';
 import ConfirmDialogModal from './ConfirmDialogModal';
 
@@ -24,7 +24,7 @@ export default function MotorAnalisisSection({
   const [logMessages, setLogMessages] = useState([]);
   const [analysisFinished, setAnalysisFinished] = useState(false);
 
-  // Dialog State for custom alerts
+  // Dialog State for warnings/errors
   const [dialogState, setDialogState] = useState({
     isOpen: false,
     title: '',
@@ -32,7 +32,13 @@ export default function MotorAnalisisSection({
     type: 'ALERT'
   });
 
-  const selectedAgent = agents.find(a => a.id === selectedAgentId) || agents[0];
+  // Filtrar agentes según visibilidad y permisos del usuario
+  const visibleAgents = agents.filter(ag => {
+    if (!currentUser || currentUser.role === 'SUPER_AUDITOR') return true;
+    return ag.esPublico !== false || ag.creadoPor === currentUser.id;
+  });
+
+  const selectedAgent = visibleAgents.find(a => a.id === selectedAgentId) || visibleAgents[0] || agents[0];
 
   const startAuditProcess = async () => {
     // REGLA ABSOLUTA 1: Si no hay API Key configurada, BLOQUEAR y MOSTRAR ALERTA
@@ -157,21 +163,22 @@ export default function MotorAnalisisSection({
             <Bot className="w-5 h-5 text-indigo-400" />
             <h3 className="text-sm font-bold text-white">Agentes de Auditoría IA</h3>
           </div>
-          {isSuperAuditor && (
-            <button
-              onClick={() => onOpenAgentManager({ mode: 'CREATE' })}
-              className="flex items-center gap-1.5 text-xs text-white font-bold bg-indigo-600 hover:bg-indigo-500 px-3.5 py-1.5 rounded-xl shadow-md transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Crear Agente</span>
-            </button>
-          )}
+          <button
+            onClick={() => onOpenAgentManager({ mode: 'CREATE' })}
+            className="flex items-center gap-1.5 text-xs text-white font-bold bg-indigo-600 hover:bg-indigo-500 px-3.5 py-1.5 rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Crear Agente</span>
+          </button>
         </div>
 
         {/* Agent Selector Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {agents.map((ag) => {
+          {visibleAgents.map((ag) => {
             const isSelected = ag.id === selectedAgentId;
+            const isAgentPublic = ag.esPublico !== false;
+            const canManage = isSuperAuditor || (ag.creadoPor && ag.creadoPor === currentUser?.id);
+
             return (
               <div
                 key={ag.id}
@@ -187,31 +194,46 @@ export default function MotorAnalisisSection({
                     <div className={`p-2 rounded-xl shrink-0 ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
                       <Bot className="w-4 h-4" />
                     </div>
-                    <h4 className="text-xs font-bold text-white truncate max-w-[140px]">
-                      {ag.nombre}
-                    </h4>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-white truncate max-w-[130px]">
+                        {ag.nombre}
+                      </h4>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {isAgentPublic ? (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-400 font-medium">
+                            <Globe className="w-2.5 h-2.5" />
+                            <span>Público</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-400 font-medium">
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>Privado</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   
-                  {/* Actions: Edit & Delete (Solo para Super Auditor) */}
-                  {isSuperAuditor && (
+                  {/* Actions: Edit & Delete (Super Auditor o Autor del agente) */}
+                  {canManage && (
                     <div className="flex items-center gap-1">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           onOpenAgentManager({ mode: 'EDIT', targetId: ag.id });
                         }}
-                        className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/20 rounded-lg transition-all"
+                        className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/20 rounded-lg transition-all cursor-pointer"
                         title="Editar instrucciones de este Agente"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
-                      {agents.length > 1 && (
+                      {visibleAgents.length > 1 && ag.id !== 'agent-iso-17025' && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onDeleteAgent(ag.id);
                           }}
-                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
                           title="Eliminar este Agente"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
