@@ -39,6 +39,13 @@ export default function AgentManagerModal({ isOpen, onClose, agents, selectedAge
     onConfirmAction: null
   });
 
+  // Sync agents list from props
+  useEffect(() => {
+    if (agents && agents.length > 0) {
+      setAgentsList(agents);
+    }
+  }, [agents]);
+
   // Sync effect when modal opens or active editing ID changes
   useEffect(() => {
     if (isOpen) {
@@ -50,7 +57,7 @@ export default function AgentManagerModal({ isOpen, onClose, agents, selectedAge
         setInstrucciones('');
       } else {
         const targetId = targetAgentId || selectedAgentId;
-        const current = agentsList.find(a => a.id === targetId) || agentsList[0];
+        const current = (agents && agents.find(a => a.id === targetId)) || agentsList.find(a => a.id === targetId) || agentsList[0];
         if (current) {
           setActiveEditingId(current.id);
           setNombre(current.nombre);
@@ -59,7 +66,7 @@ export default function AgentManagerModal({ isOpen, onClose, agents, selectedAge
         }
       }
     }
-  }, [isOpen, initialMode, targetAgentId, selectedAgentId]);
+  }, [isOpen, initialMode, targetAgentId, selectedAgentId, agents]);
 
   if (!isOpen) return null;
 
@@ -100,7 +107,7 @@ export default function AgentManagerModal({ isOpen, onClose, agents, selectedAge
       onConfirmAction: () => {
         const updated = agentsList.filter(a => a.id !== idToDelete);
         setAgentsList(updated);
-        onSaveAgents(updated);
+        if (onSaveAgents) onSaveAgents(updated);
         if (activeEditingId === idToDelete && updated.length > 0) {
           handleSelectToEdit(updated[0]);
         }
@@ -110,23 +117,33 @@ export default function AgentManagerModal({ isOpen, onClose, agents, selectedAge
 
   const handleSaveCurrentAgent = (e) => {
     e.preventDefault();
+    if (!nombre.trim()) {
+      setDialogState({
+        isOpen: true,
+        title: 'Nombre Requerido',
+        message: 'Por favor ingrese un nombre para el Agente Auditor.',
+        type: 'ALERT'
+      });
+      return;
+    }
+
     let updated;
     const exists = agentsList.some(a => a.id === activeEditingId);
 
     if (exists) {
       updated = agentsList.map(a => {
         if (a.id === activeEditingId) {
-          return { ...a, nombre, descripcion, instrucciones };
+          return { ...a, nombre: nombre.trim(), descripcion: descripcion.trim(), instrucciones };
         }
         return a;
       });
     } else {
-      updated = [...agentsList, { id: activeEditingId, nombre, descripcion, instrucciones }];
+      updated = [...agentsList, { id: activeEditingId, nombre: nombre.trim(), descripcion: descripcion.trim(), instrucciones }];
     }
 
     setAgentsList(updated);
-    onSaveAgents(updated);
-    onSelectAgent(activeEditingId);
+    if (onSaveAgents) onSaveAgents(updated);
+    if (onSelectAgent) onSelectAgent(activeEditingId);
     onClose();
   };
 

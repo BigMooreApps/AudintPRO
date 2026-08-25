@@ -296,8 +296,23 @@ export default function App() {
     targetId: null
   });
 
-  const [agents, setAgents] = useState(DEFAULT_AGENTS);
-  const [selectedAgentId, setSelectedAgentId] = useState(DEFAULT_AGENTS[0].id);
+  const [agents, setAgents] = useState(() => {
+    try {
+      const saved = localStorage.getItem('audint_pro_agents');
+      return saved ? JSON.parse(saved) : DEFAULT_AGENTS;
+    } catch (e) {
+      return DEFAULT_AGENTS;
+    }
+  });
+
+  const [selectedAgentId, setSelectedAgentId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('audint_pro_selected_agent');
+      return saved || DEFAULT_AGENTS[0].id;
+    } catch (e) {
+      return DEFAULT_AGENTS[0].id;
+    }
+  });
 
   const selectedAgent = agents.find(a => a.id === selectedAgentId) || agents[0];
   const customPrompt = selectedAgent ? selectedAgent.instrucciones : '';
@@ -316,16 +331,21 @@ export default function App() {
     });
   };
 
-  const handleSaveAgent = (agentData) => {
-    if (agentModalState.mode === 'CREATE') {
-      const newAgent = {
-        ...agentData,
-        id: `agent-${Date.now()}`
-      };
-      setAgents(prev => [...prev, newAgent]);
-      setSelectedAgentId(newAgent.id);
-    } else {
-      setAgents(prev => prev.map(a => a.id === agentData.id ? agentData : a));
+  const handleSaveAgents = (newAgentsList) => {
+    setAgents(newAgentsList);
+    try {
+      localStorage.setItem('audint_pro_agents', JSON.stringify(newAgentsList));
+    } catch (e) {
+      console.error('Error guardando agentes en localStorage', e);
+    }
+  };
+
+  const handleSelectAgent = (agentId) => {
+    setSelectedAgentId(agentId);
+    try {
+      localStorage.setItem('audint_pro_selected_agent', agentId);
+    } catch (e) {
+      console.error('Error guardando agente seleccionado en localStorage', e);
     }
   };
 
@@ -340,9 +360,9 @@ export default function App() {
       return;
     }
     const remaining = agents.filter(a => a.id !== agentId);
-    setAgents(remaining);
+    handleSaveAgents(remaining);
     if (selectedAgentId === agentId) {
-      setSelectedAgentId(remaining[0].id);
+      handleSelectAgent(remaining[0].id);
     }
   };
 
@@ -698,10 +718,12 @@ export default function App() {
       <AgentManagerModal
         isOpen={agentModalState.isOpen}
         onClose={() => setAgentModalState({ isOpen: false, mode: 'EDIT', targetId: null })}
-        mode={agentModalState.mode}
+        initialMode={agentModalState.mode}
+        targetAgentId={agentModalState.targetId}
         agents={agents}
-        targetId={agentModalState.targetId}
-        onSaveAgent={handleSaveAgent}
+        selectedAgentId={selectedAgentId}
+        onSelectAgent={handleSelectAgent}
+        onSaveAgents={handleSaveAgents}
       />
 
       <AuditoresModal
