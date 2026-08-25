@@ -14,6 +14,7 @@ import CompromisosModal from './components/CompromisosModal';
 import AuditoriasModal from './components/AuditoriasModal';
 import ConfirmDialogModal from './components/ConfirmDialogModal';
 import LoginScreen from './components/LoginScreen';
+import InactivityTimeoutModal from './components/InactivityTimeoutModal';
 import { exportAuditReportPDF } from './engine/pdfExport';
 import { DEFAULT_AREAS, DEFAULT_NUMERALES_MAPEO } from './data/defaultMapeo';
 import { 
@@ -30,18 +31,27 @@ import {
 } from './services/supabaseClient';
 
 const STORAGE_KEY_AUTH_USER = 'AGENTE_PROMAX_AUTH_USER';
+const INACTIVITY_WARNING_MS = 5 * 60 * 1000; // 5 minutos de inactividad para pedir confirmación
+const INACTIVITY_LOGOUT_MS = 7 * 60 * 1000;  // 7 minutos de inactividad para cierre automático
 
 export default function App() {
   // 0. Autenticación y Control de Roles (SUPER_AUDITOR vs AUDITORES)
+  // Usar sessionStorage para que en otra máquina o ventana nueva requiera iniciar sesión
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const savedUser = localStorage.getItem(STORAGE_KEY_AUTH_USER);
+      const savedUser = sessionStorage.getItem(STORAGE_KEY_AUTH_USER);
       if (savedUser) return JSON.parse(savedUser);
     } catch (e) {
       console.error('Error al cargar sesión de usuario:', e);
     }
     return null; // Si es null, muestra LoginScreen
   });
+
+  // Estados de control de inactividad (5 min advertencia / 7 min cierre)
+  const [showInactivityModal, setShowInactivityModal] = useState(false);
+  const [inactivityRemainingSeconds, setInactivityRemainingSeconds] = useState(120);
+  const [inactivityNotice, setInactivityNotice] = useState('');
+  const lastActivityRef = useRef(Date.now());
 
   // 1. Gestión de Ciclos de Auditoría Periódicos (Multi-Auditoría)
   const [auditCycles, setAuditCycles] = useState(() => loadAllAuditCycles());
@@ -89,8 +99,11 @@ export default function App() {
   // Manejo de inicio y cierre de sesión
   const handleLogin = (user) => {
     setCurrentUser(user);
+    setInactivityNotice('');
+    lastActivityRef.current = Date.now();
     try {
-      localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(user));
+      sessionStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(user));
+      localStorage.removeItem(STORAGE_KEY_AUTH_USER); // Limpieza de sesiones antiguas
     } catch (e) {
       console.error('Error al guardar sesión:', e);
     }
@@ -111,14 +124,52 @@ export default function App() {
     setStep(1);
   };
 
-  const handleLogout = () => {
+  const handleLogout = (message = '') => {
     try {
+      sessionStorage.removeItem(STORAGE_KEY_AUTH_USER);
       localStorage.removeItem(STORAGE_KEY_AUTH_USER);
     } catch (e) {
       console.error('Error al remover sesión:', e);
     }
     setCurrentUser(null);
+    setShowInactivityModal(false);
+    if (message) {
+      setInactivityNotice(message);
+    }
   };
+
+  // Monitoreo continuo de actividad del usuario (5 min advertencia / 7 min cierre total)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const resetActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach(ev => window.addEventListener(ev, resetActivity, { passive: true }));
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - lastActivityRef.current;
+
+      if (elapsed >= INACTIVITY_LOGOUT_MS) {
+        setShowInactivityModal(false);
+        handleLogout('⚠️ Su sesión se ha cerrado automáticamente tras 7 minutos de inactividad.');
+      } else if (elapsed >= INACTIVITY_WARNING_MS) {
+        setShowInactivityModal(true);
+        const remaining = Math.max(0, Math.ceil((INACTIVITY_LOGOUT_MS - elapsed) / 1000));
+        setInactivityRemainingSeconds(remaining);
+      } else {
+        setShowInactivityModal(false);
+      }
+    }, 1000);
+
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, resetActivity));
+      clearInterval(interval);
+    };
+  }, [currentUser]);
 
   // Sincronizar hacia localStorage y Supabase cuando cambie el estado de la auditoría activa
   const syncActiveAuditToStorage = (updatedFields = {}) => {
@@ -597,7 +648,13 @@ export default function App() {
 
   // Si no hay usuario autenticado, renderizar la pantalla de Login
   if (!currentUser) {
-    return <LoginScreen areas={areas} onLogin={handleLogin} />;
+    return (
+      <LoginScreen 
+        areas={areas} 
+        onLogin={handleLogin} 
+        inactivityMessage={inactivityNotice}
+      />
+    );
   }
 
   return (
@@ -779,6 +836,17 @@ export default function App() {
           if (appDialogState.onCancelAction) appDialogState.onCancelAction();
           setAppDialogState(prev => ({ ...prev, isOpen: false }));
         }}
+      />
+
+      {/* Modal de Alerta de Inactividad (5 min -> Cierre automático a los 7 min) */}
+      <InactivityTimeoutModal
+        isOpen={showInactivityModal}
+        remainingSeconds={inactivityRemainingSeconds}
+        onStayLoggedIn={() => {
+          lastActivityRef.current = Date.now();
+          setShowInactivityModal(false);
+        }}
+        onLogout={() => handleLogout('Ha cerrado sesión correctamente.')}
       />
 
     </div>

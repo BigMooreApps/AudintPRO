@@ -18,7 +18,8 @@ import {
 
 export default function LoginScreen({
   areas = [],
-  onLogin
+  onLogin,
+  inactivityMessage = ''
 }) {
   const [selectedRole, setSelectedRole] = useState('SUPER_AUDITOR'); // 'SUPER_AUDITOR' | 'AUDITOR'
   const [adminPassword, setAdminPassword] = useState('');
@@ -105,6 +106,13 @@ export default function LoginScreen({
           <p className="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto font-normal leading-relaxed">
             Plataforma Integral de Auditorías Internas y Control de Conformidad Normativa
           </p>
+
+          {inactivityMessage && (
+            <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-2xl text-amber-300 text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 animate-fadeIn">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
+              <span>{inactivityMessage}</span>
+            </div>
+          )}
         </div>
 
         {/* Ultra-Modern Glassmorphic Card */}

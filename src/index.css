@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
+  html, body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    zoom: 80%;
   }
   
   code, pre, blockquote {
